@@ -2,7 +2,7 @@ name: Solar MQTT Publisher
 version: "0.1.0"
 slug: solar_mqtt_publisher
 description: Publishes solar/grid energy totals to Home Assistant via MQTT Discovery for the Energy Dashboard.
-url: https://github.com/sujithq/solar-mqtt-addon
+url: https://github.com/sujithq/solar-mqtt-publisher
 arch:
   - aarch64
   - amd64
