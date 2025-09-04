@@ -6,6 +6,8 @@ public sealed class Options
     public required MqttOptions Mqtt { get; init; }
     public required DeviceOptions Device { get; init; }
     public required ApiOptions Api { get; init; }
+    public string? Log_Level { get; init; }
+    public double? Value_Eps { get; init; }
 
     public static Options Load(string path = "data/options.json")
     {

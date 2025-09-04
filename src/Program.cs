@@ -9,8 +9,9 @@ public static class Program
 {
     public static async Task Main(string[] args)
     {
-        var opts = Options.Load();
-        var baseTopic = opts.Mqtt.Base_Topic.TrimEnd('/');
+    var opts = Options.Load();
+    LogHelper.Configure(opts.Log_Level);
+    var baseTopic = opts.Mqtt.Base_Topic.TrimEnd('/');
         LogHelper.Log(LogLevelSimple.Info, $"Startup - MQTT broker={opts.Mqtt.Host}:{opts.Mqtt.Port}, base_topic={baseTopic}, poll_interval={opts.Api.Poll_Interval_Sec}s");
 
         using var cts = new CancellationTokenSource();
@@ -24,7 +25,7 @@ public static class Program
 
         async Task Pub(string slug, double val)
         {
-            ValueChangeTracker.EnsureInitialized();
+            ValueChangeTracker.EnsureInitialized(opts);
             if (ValueChangeTracker.TrySkip(slug, val)) return;
             var msg = new MQTTnet.MqttApplicationMessageBuilder()
                 .WithTopic($"{baseTopic}/state/{opts.Device.Unique_Prefix}{slug}")
@@ -86,7 +87,7 @@ public static class Program
             }
         }
 
-        LogHelper.Log(LogLevelSimple.Info, "Exited main loop. Shutting down.");
+    LogHelper.Log(LogLevelSimple.Info, "Exited main loop. Shutting down.");
     }
 }
 
@@ -96,14 +97,11 @@ static class ValueChangeTracker
     private static readonly Dictionary<string, double> _last = new();
     private static bool _initialized = false;
     private static double _epsilon = 0d; // default exact comparison
-    public static void EnsureInitialized()
+    public static void EnsureInitialized(Options root)
     {
         if (_initialized) return;
         _initialized = true;
-        if (double.TryParse(Environment.GetEnvironmentVariable("VALUE_EPS"), NumberStyles.Float, CultureInfo.InvariantCulture, out var eps) && eps >= 0)
-        {
-            _epsilon = eps;
-        }
+        if (root.Value_Eps is double eps && eps >= 0) _epsilon = eps;
         LogHelper.Log(LogLevelSimple.Info, $"Value change detection enabled (epsilon={_epsilon})");
     }
     public static bool TrySkip(string slug, double value)
@@ -129,7 +127,11 @@ static class ValueChangeTracker
 enum LogLevelSimple { Trace = 0, Debug = 1, Info = 2, Warn = 3, Error = 4 }
 static class LogHelper
 {
-    public static LogLevelSimple MinLevel = ParseLevel(Environment.GetEnvironmentVariable("LOG_LEVEL"));
+    public static LogLevelSimple MinLevel = LogLevelSimple.Info;
+    public static void Configure(string? levelRaw)
+    {
+        MinLevel = ParseLevel(levelRaw);
+    }
     private static LogLevelSimple ParseLevel(string? raw) => raw?.ToUpperInvariant() switch
     {
         "TRACE" => LogLevelSimple.Trace,

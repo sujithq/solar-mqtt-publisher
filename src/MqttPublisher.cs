@@ -12,6 +12,15 @@ public static class MqttPublisher
             .WithTcpServer(cfg.Host, cfg.Port);
         if (!string.IsNullOrWhiteSpace(cfg.Username))
             builder = builder.WithCredentials(cfg.Username, cfg.Password);
+        // Last Will placeholder (actual topic patched after discovery publish by reconnect not needed; simple static base if env provided)
+        // For simplicity we don't know base_topic yet here; will use env override or fallback generic.
+        var willTopic = Environment.GetEnvironmentVariable("LWT_TOPIC") ?? "solar/status";
+        builder = builder
+            .WithWillTopic(willTopic)
+            .WithWillPayload("offline")
+            .WithWillRetain(true)
+            .WithWillQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce);
+
         await client.ConnectAsync(builder.Build(), ct);
         return client;
     }
@@ -65,4 +74,7 @@ public static class MqttPublisher
         var baseTopic = opts.Mqtt.Base_Topic.TrimEnd('/');
         await client.PublishStringAsync($"{baseTopic}/status", payload, retain: true, cancellationToken: ct);
     }
+
+    public static Task PublishOfflineAsync(IMqttClient client, Options opts, CancellationToken ct)
+        => PublishStringAsync(client, opts, "offline", true, ct);
 }

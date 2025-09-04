@@ -1,0 +1,31 @@
+{
+  "log_level": "INFO",
+  "value_eps": 0.0,
+  "mqtt": {
+    "host": "127.0.0.1",
+    "port": 1883,
+    "username": "",
+    "password": "",
+    "base_topic": "solar"
+  },
+  "device": {
+    "name": "Rooftop PV",
+    "manufacturer": "Custom",
+    "model": "API",
+    "identifiers": "pv-system-1",
+    "unique_prefix": "pv1_"
+  },
+  "api": {
+    "url": "http://host.docker.internal:8080/metrics",
+    "method": "GET",
+    "headers": {},
+    "verify_ssl": true,
+    "timeout_sec": 10,
+    "poll_interval_sec": 60,
+    "fields": {
+      "solar_total_kwh": "solar_energy_total_kwh",
+      "grid_import_kwh": "grid_import_total_kwh",
+      "grid_export_kwh": "grid_export_total_kwh"
+    }
+  }
+}

@@ -1,6 +1,12 @@
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudio,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=visualstudio,visualstudiocode
 
+# --- Project specific (secrets/runtime) ---
+# Do NOT commit runtime options containing credentials
+data/
+# Local developer copy of options used for debugging
+src/Data/options.json
+
 ### VisualStudioCode ###
 .vscode/*
 !.vscode/settings.json
@@ -416,5 +422,3 @@ FodyWeavers.xsd
 # Additional files built by Visual Studio
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudio,visualstudiocode
-
-src/Data/options.local.json
