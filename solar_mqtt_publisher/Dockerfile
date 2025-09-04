@@ -5,7 +5,7 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build
 ARG TARGETARCH
 WORKDIR /src
 
-COPY . ./
+COPY /src ./
 RUN dotnet restore SolarMqtt.csproj
 RUN case "$TARGETARCH" in \
     amd64) rid=linux-musl-x64;; \
