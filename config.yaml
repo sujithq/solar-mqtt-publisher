@@ -1,0 +1,64 @@
+name: Solar MQTT Publisher
+version: "0.1.0"
+slug: solar_mqtt_publisher
+description: Publishes solar/grid energy totals to Home Assistant via MQTT Discovery for the Energy Dashboard.
+url: https://github.com/sujithq/solar-mqtt-addon
+arch:
+  - aarch64
+  - amd64
+  - armv7
+init: false
+startup: services
+boot: auto
+stage: experimental
+panel_icon: mdi:solar-power
+options:
+  mqtt:
+    host: 127.0.0.1
+    port: 1883
+    username: ""
+    password: ""
+    base_topic: "solar"
+  device:
+    name: "Rooftop PV"
+    manufacturer: "Custom"
+    model: "API"
+    identifiers: "pv-system-1"
+    unique_prefix: "pv1_"
+  api:
+    url: "http://host.docker.internal:8080/metrics"
+    method: GET
+    headers: {}
+    key: ""
+    verify_ssl: true
+    timeout_sec: 10
+    poll_interval_sec: 60
+    fields:
+      solar_total_kwh: "solar_energy_total_kwh"
+      grid_import_kwh: "grid_import_total_kwh"
+      grid_export_kwh: "grid_export_total_kwh"
+schema:
+  mqtt:
+    host: str
+    port: int
+    username: str?
+    password: str?
+    base_topic: str
+  device:
+    name: str
+    manufacturer: str?
+    model: str?
+    identifiers: str
+    unique_prefix: str
+  api:
+    url: str
+    method: list(GET|POST)
+    headers: dict?
+    key: str?
+    verify_ssl: bool
+    timeout_sec: int
+    poll_interval_sec: int
+    fields:
+      solar_total_kwh: str
+      grid_import_kwh: str
+      grid_export_kwh: str
