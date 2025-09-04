@@ -10,7 +10,7 @@ arch:
 init: false
 startup: services
 boot: auto
-stage: experimental
+stage: stable
 panel_icon: mdi:solar-power
 watchdog: "mqtt"
 services:
