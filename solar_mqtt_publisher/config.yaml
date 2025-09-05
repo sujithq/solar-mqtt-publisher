@@ -1,18 +1,19 @@
-name: Solar MQTT Publisher
-version: "0.1.0"
-slug: solar_mqtt_publisher
+name: "Solar MQTT Publisher"
 description: Publishes solar/grid energy totals to Home Assistant via MQTT Discovery for the Energy Dashboard.
-url: https://github.com/sujithq/solar-mqtt-publisher
+version: "0.1.12"
+slug: solar_mqtt_publisher
+init: false
 arch:
   - aarch64
   - amd64
+  - armhf
   - armv7
-init: false
+  - i386
+url: https://github.com/sujithq/solar-mqtt-publisher
 startup: services
 boot: auto
 stage: stable
 panel_icon: mdi:solar-power
-watchdog: "mqtt"
 services:
   - mqtt:need
 timeout: 30
@@ -23,56 +24,18 @@ uart: false
 gpio: false
 host_network: false
 options:
-  log_level: INFO
-  value_eps: 0
   mqtt:
     host: 127.0.0.1
-    port: 1883
-    username: ""
     password: ""
-    base_topic: "solar"
-  device:
-    name: "Rooftop PV"
-    manufacturer: "Custom"
-    model: "API"
-    identifiers: "pv-system-1"
-    unique_prefix: "pv1_"
   api:
     url: "http://host.docker.internal:8080/metrics"
-    method: GET
-    headers: {}
-    key: ""
-    verify_ssl: true
-    timeout_sec: 10
-    poll_interval_sec: 60
-    fields:
-      solar_total_kwh: "solar_energy_total_kwh"
-      grid_import_kwh: "grid_import_total_kwh"
-      grid_export_kwh: "grid_export_total_kwh"
+  log:
+    level: INFO
 schema:
-  log_level: list(TRACE|DEBUG|INFO|WARN|ERROR)?
-  value_eps: float?
   mqtt:
     host: str
-    port: int
-    username: str?
-    password: str?
-    base_topic: str
-  device:
-    name: str
-    manufacturer: str?
-    model: str?
-    identifiers: str
-    unique_prefix: str
+    password: password
   api:
     url: str
-    method: list(GET|POST)
-    headers: dict?
-    key: str?
-    verify_ssl: bool
-    timeout_sec: int
-    poll_interval_sec: int
-    fields:
-      solar_total_kwh: str
-      grid_import_kwh: str
-      grid_export_kwh: str
+  log:
+    level: list(TRACE|DEBUG|INFO|WARN|ERROR)

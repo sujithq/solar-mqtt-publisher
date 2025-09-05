@@ -11,12 +11,17 @@ public static class ApiClient
         using var req = new HttpRequestMessage(new HttpMethod(api.Method ?? "GET"), api.Url);
         if (!string.IsNullOrWhiteSpace(api.Key))
             req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", api.Key);
-        if (api.Headers is not null)
+        if (api.Headers is not null) // merged from api.headers + api_headers[] (if provided)
             foreach (var kv in api.Headers) req.Headers.TryAddWithoutValidation(kv.Key, kv.Value);
+
+    LogHelper.Log(LogLevelSimple.Info, $"HTTP {api.Method ?? "GET"} {api.Url} timeout={api.Timeout_Sec}s verify_ssl={api.Verify_Ssl} headers={(api.Headers?.Count ?? 0)} auth={(string.IsNullOrWhiteSpace(api.Key) ? "none" : "bearer")}");
+    var sw = System.Diagnostics.Stopwatch.StartNew();
 
         var res = await http.SendAsync(req, ct);
         res.EnsureSuccessStatusCode();
         var json = await res.Content.ReadAsStringAsync(ct);
+    sw.Stop();
+    LogHelper.Log(LogLevelSimple.Info, $"HTTP {(int)res.StatusCode} {api.Url} in {sw.ElapsedMilliseconds} ms bytes={json.Length}");
         return JsonNode.Parse(json)!;
     }
 
@@ -35,36 +40,66 @@ public static class ApiClient
     public static bool TryComputeMyEnergyTotals(JsonNode node, out double solarKwh, out double importKwh, out double exportKwh)
     {
         solarKwh = importKwh = exportKwh = 0d;
-        try
+    try
         {
-            // The JSON object has year keys, so deserialize to Dictionary<string, List<BarChartData>>
-            var opts = new JsonSerializerOptions
+            if (node is not JsonObject rootObj || rootObj.Count == 0) return false;
+
+            double sSum = 0, iSum = 0, eSumWh = 0; // eSumWh in Wh, convert later
+            int recordCount = 0;
+
+            foreach (var yearProp in rootObj)
             {
-                PropertyNameCaseInsensitive = true,
-                NumberHandling = JsonNumberHandling.AllowReadingFromString
-            };
+                if (yearProp.Value is not JsonArray arr) continue;
+                foreach (var dayNode in arr)
+                {
+                    if (dayNode is not JsonObject dayObj) continue;
+                    // Extract P (solar kWh), U (import kWh), I (export Wh)
+                    if (TryGetNumber(dayObj, "P", out var p)) sSum += p;
+                    if (TryGetNumber(dayObj, "U", out var u)) iSum += u;
+                    if (TryGetNumber(dayObj, "I", out var i)) eSumWh += i; // still Wh
+                    recordCount++;
+                }
+            }
 
-            var dict = node.Deserialize<Dictionary<string, List<BarChartData>>>(opts);
-            if (dict is null || dict.Count == 0) return false;
+            if (recordCount == 0) return false;
 
-            var allDays = dict.Values.SelectMany(x => x ?? Enumerable.Empty<BarChartData>());
-
-            // P and U are kWh; I is Wh (convert to kWh)
-            solarKwh = allDays.Where(d => d is not null).Sum(d => d.P);
-            importKwh = allDays.Where(d => d is not null).Sum(d => d.U);
-            exportKwh = allDays.Where(d => d is not null).Sum(d => d.I) / 1000.0;
-
-            // If everything is zero and there were no entries, consider it a miss
-            return dict.Values.Any(v => v is { Count: > 0 });
+            solarKwh = sSum;
+            importKwh = iSum;
+            exportKwh = eSumWh / 1000.0; // convert Wh -> kWh
+            LogHelper.Log(LogLevelSimple.Trace, $"Auto-detect totals: solar={solarKwh:F4}kWh import={importKwh:F4}kWh export={exportKwh:F4}kWh records={recordCount}");
+            return true;
         }
-        catch
+        catch (Exception ex)
         {
+            LogHelper.Log(LogLevelSimple.Warn, $"Auto-detect totals failed: {ex.Message}");
             return false;
         }
     }
+
+    private static bool TryGetNumber(JsonObject obj, string key, out double value)
+    {
+        value = 0;
+        if (!obj.TryGetPropertyValue(key, out var n) || n is null) return false;
+        try
+        {
+            switch (n)
+            {
+                case JsonValue jv:
+                    if (jv.TryGetValue<double>(out var d)) { value = d; return true; }
+                    // Try string -> double
+                    if (jv.TryGetValue<string>(out var s) && double.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var ds)) { value = ds; return true; }
+                    break;
+                default:
+                    if (double.TryParse(n.ToJsonString().Trim('"'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var dx)) { value = dx; return true; }
+                    break;
+            }
+        }
+        catch { }
+        return false;
+    }
 }
 
-// Minimal models – only what we need
+// Minimal models ï¿½ only what we need
 public sealed class BarChartData
 {
     [JsonPropertyName("D")] public int D { get; set; }

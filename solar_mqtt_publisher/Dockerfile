@@ -1,4 +1,13 @@
-ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.19
+# ARG BUILD_FROM
+# FROM $BUILD_FROM
+
+# # Copy data for add-on
+# COPY run.sh /
+# RUN chmod a+x /run.sh
+
+# CMD [ "/run.sh" ]
+
+ARG BUILD_FROM
 
 # --- Build stage ---
 FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build
@@ -19,6 +28,7 @@ RUN case "$TARGETARCH" in \
 
 # --- Runtime stage ---
 FROM ${BUILD_FROM}
+
 WORKDIR /app
 
 RUN apk add --no-cache ca-certificates tzdata && update-ca-certificates
@@ -28,3 +38,5 @@ COPY run.sh /app/
 RUN chmod +x /app/run.sh
 
 CMD ["/app/run.sh"]
+
+

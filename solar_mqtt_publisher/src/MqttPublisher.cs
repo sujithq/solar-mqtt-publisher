@@ -1,6 +1,5 @@
 using MQTTnet;
 using MQTTnet.Client;
-using System.Text.Json;
 
 public static class MqttPublisher
 {
@@ -8,21 +7,48 @@ public static class MqttPublisher
     {
         var factory = new MqttFactory();
         var client = factory.CreateMqttClient();
-        var builder = new MqttClientOptionsBuilder()
-            .WithTcpServer(cfg.Host, cfg.Port);
-        if (!string.IsNullOrWhiteSpace(cfg.Username))
-            builder = builder.WithCredentials(cfg.Username, cfg.Password);
-        // Last Will placeholder (actual topic patched after discovery publish by reconnect not needed; simple static base if env provided)
-        // For simplicity we don't know base_topic yet here; will use env override or fallback generic.
-        var willTopic = Environment.GetEnvironmentVariable("LWT_TOPIC") ?? "solar/status";
-        builder = builder
-            .WithWillTopic(willTopic)
-            .WithWillPayload("offline")
-            .WithWillRetain(true)
-            .WithWillQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce);
 
-        await client.ConnectAsync(builder.Build(), ct);
-        return client;
+        static MqttClientOptions Build(MqttOptions cfg)
+        {
+            var b = new MqttClientOptionsBuilder().WithTcpServer(cfg.Host, cfg.Port);
+            if (!string.IsNullOrWhiteSpace(cfg.Username))
+                b = b.WithCredentials(cfg.Username, cfg.Password);
+            var willTopic = Environment.GetEnvironmentVariable("LWT_TOPIC") ?? "solar/status";
+            b = b.WithWillTopic(willTopic)
+                .WithWillPayload("offline")
+                .WithWillRetain(true)
+                .WithWillQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce);
+            return b.Build();
+        }
+
+        // Sanitized config log
+        LogHelper.Log(LogLevelSimple.Info,$"[MQTT] Attempting connection host={cfg.Host} port={cfg.Port} user={(string.IsNullOrWhiteSpace(cfg.Username) ? "<none>" : cfg.Username)}");
+        try
+        {
+            await client.ConnectAsync(Build(cfg), ct);
+            LogHelper.Log(LogLevelSimple.Info,"[MQTT] Connected on primary host.");
+            return client;
+        }
+        catch (MQTTnet.Adapter.MqttConnectingFailedException ex) when (!string.Equals(cfg.Host, "core-mosquitto", StringComparison.OrdinalIgnoreCase))
+        {
+            LogHelper.Log(LogLevelSimple.Warn,$"[MQTT] Primary connection failed ({ex.ResultCode}) - trying fallback host core-mosquitto...");
+            // fallback attempt
+            var originalHost = cfg.Host;
+            cfg.Host = "core-mosquitto"; // mutate for fallback; acceptable since options instance not reused elsewhere for host-specific logic
+            try
+            {
+                await client.ConnectAsync(Build(cfg), ct);
+                LogHelper.Log(LogLevelSimple.Info,"[MQTT] Connected using fallback host core-mosquitto.");
+                return client;
+            }
+            catch (Exception ex2)
+            {
+                // restore host before throwing
+                cfg.Host = originalHost;
+                LogHelper.Log(LogLevelSimple.Error,$"[MQTT] Fallback connection failed: {ex2.Message}");
+                throw; // propagate last exception
+            }
+        }
     }
 
     public static async Task PublishDiscoveryAsync(IMqttClient client, Options opts, CancellationToken ct)
@@ -42,24 +68,18 @@ public static class MqttPublisher
             ("grid_import_kwh","Grid Import Total", $"{pref}grid_import","mdi:transmission-tower-import"),
             ("grid_export_kwh","Grid Export Total", $"{pref}grid_export","mdi:transmission-tower-export"),
         };
+
+        // Pre-build device JSON once to avoid reflection-based serialization (AOT friendly)
+        static string J(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        var deviceJson = $"{{\"identifiers\":[\"{J(opts.Device.Identifiers)}\"],\"name\":\"{J(opts.Device.Name)}\",\"manufacturer\":\"{J(opts.Device.Manufacturer ?? string.Empty)}\",\"model\":\"{J(opts.Device.Model ?? string.Empty)}\"}}";
         foreach (var s in sensors)
         {
             var stateTopic = $"{baseTopic}/state/{s.Slug}";
             var cfgTopic = $"homeassistant/sensor/{s.Slug}/config";
-            var cfg = new
-            {
-                name = s.Name,
-                unique_id = s.Slug,
-                state_topic = stateTopic,
-                unit_of_measurement = "kWh",
-                device_class = "energy",
-                state_class = "total_increasing",
-                icon = s.Icon,
-                device
-            };
+            var cfgJson = $"{{\"name\":\"{J(s.Name)}\",\"unique_id\":\"{J(s.Slug)}\",\"state_topic\":\"{J(stateTopic)}\",\"unit_of_measurement\":\"kWh\",\"device_class\":\"energy\",\"state_class\":\"total_increasing\",\"icon\":\"{J(s.Icon)}\",\"device\":{deviceJson}}}";
             var msg = new MqttApplicationMessageBuilder()
                 .WithTopic(cfgTopic)
-                .WithPayload(JsonSerializer.Serialize(cfg))
+                .WithPayload(cfgJson)
                 .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce)
                 .WithRetainFlag(true)
                 .Build();

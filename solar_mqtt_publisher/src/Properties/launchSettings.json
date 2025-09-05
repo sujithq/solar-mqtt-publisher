@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "SolarMqtt": {
+      "commandName": "Project",
+      "commandLineArgs": "data/options.json"
+    }
+  }
+}

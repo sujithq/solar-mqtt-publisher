@@ -5,13 +5,23 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <InvariantGlobalization>true</InvariantGlobalization>
+  <UserSecretsId>c5a1fc1c-5cf2-4bf1-9f7d-3d4f4fa3e5d2</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
+  <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+  <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.0" />
+  <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
+  <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
+  <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="8.0.0" />
+  <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.0" />
     <PackageReference Include="MQTTnet" Version="4.3.7.1207" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="Data\options.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+	  <None Update="default\options.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="data\options.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
   </ItemGroup>
 </Project>

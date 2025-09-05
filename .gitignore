@@ -3,9 +3,9 @@
 
 # --- Project specific (secrets/runtime) ---
 # Do NOT commit runtime options containing credentials
-data/
+# data/
 # Local developer copy of options used for debugging
-src/Data/options.json
+# src/data/options.json
 
 ### VisualStudioCode ###
 .vscode/*
@@ -422,3 +422,4 @@ FodyWeavers.xsd
 # Additional files built by Visual Studio
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudio,visualstudiocode
+solar_mqtt_publisher/src/data/options.json

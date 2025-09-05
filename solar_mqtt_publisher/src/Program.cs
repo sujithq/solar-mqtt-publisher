@@ -9,9 +9,13 @@ public static class Program
 {
     public static async Task Main(string[] args)
     {
-    var opts = Options.Load();
-    LogHelper.Configure(opts.Log_Level);
-    var baseTopic = opts.Mqtt.Base_Topic.TrimEnd('/');
+
+        // Default to Supervisor’s options file
+        var supervisorOptions = args.Length > 0 ? args[0] : "/data/options.json";
+
+        var opts = ConfigurationLoader.Load(supervisorOptions: supervisorOptions);
+        LogHelper.Configure(opts.Log_Level);
+        var baseTopic = opts.Mqtt.Base_Topic.TrimEnd('/');
         LogHelper.Log(LogLevelSimple.Info, $"Startup - MQTT broker={opts.Mqtt.Host}:{opts.Mqtt.Port}, base_topic={baseTopic}, poll_interval={opts.Api.Poll_Interval_Sec}s");
 
         using var cts = new CancellationTokenSource();
@@ -44,10 +48,10 @@ public static class Program
             {
                 iteration++;
                 var sw = Stopwatch.StartNew();
-                LogHelper.Log(LogLevelSimple.Debug, $"Iteration {iteration} - fetching API data...");
+                LogHelper.Log(LogLevelSimple.Info, $"Iteration {iteration} - fetching API data...");
                 var json = await ApiClient.FetchAsync(opts.Api, cts.Token);
                 sw.Stop();
-                LogHelper.Log(LogLevelSimple.Debug, $"Iteration {iteration} - fetch completed in {sw.ElapsedMilliseconds} ms");
+                LogHelper.Log(LogLevelSimple.Info, $"Iteration {iteration} - fetch completed in {sw.ElapsedMilliseconds} ms");
 
                 if (ApiClient.TryComputeMyEnergyTotals(json, out var sKwh, out var giKwh, out var geKwh))
                 {
@@ -58,25 +62,32 @@ public static class Program
                 }
                 else
                 {
-                    var totals = new
+                    if (opts.Api.Fields is null)
                     {
-                        solar = ApiClient.GetDouble(json, opts.Api.Fields.Solar_Total_Kwh),
-                        import_ = ApiClient.GetDouble(json, opts.Api.Fields.Grid_Import_Kwh),
-                        export_ = ApiClient.GetDouble(json, opts.Api.Fields.Grid_Export_Kwh)
-                    };
-                    LogHelper.Log(LogLevelSimple.Info, $"Iteration {iteration} - fallback totals solar={totals.solar:F3} grid_import={totals.import_:F3} grid_export={totals.export_:F3}");
-                    await Pub("solar_total", totals.solar);
-                    await Pub("grid_import", totals.import_);
-                    await Pub("grid_export", totals.export_);
+                        LogHelper.Log(LogLevelSimple.Warn, $"Iteration {iteration} - no field mapping (api.fields/api_fields) present; skipping publish");
+                    }
+                    else
+                    {
+                        var totals = new
+                        {
+                            solar = ApiClient.GetDouble(json, opts.Api.Fields.Solar_Total_Kwh),
+                            import_ = ApiClient.GetDouble(json, opts.Api.Fields.Grid_Import_Kwh),
+                            export_ = ApiClient.GetDouble(json, opts.Api.Fields.Grid_Export_Kwh)
+                        };
+                        LogHelper.Log(LogLevelSimple.Info, $"Iteration {iteration} - fallback totals solar={totals.solar:F3} grid_import={totals.import_:F3} grid_export={totals.export_:F3}");
+                        await Pub("solar_total", totals.solar);
+                        await Pub("grid_import", totals.import_);
+                        await Pub("grid_export", totals.export_);
+                    }
                 }
             }
             catch (Exception ex)
             {
-                LogHelper.Log(LogLevelSimple.Error, $"Iteration {iteration} - error during processing", ex);
+                LogHelper.Log(LogLevelSimple.Warn, $"Iteration {iteration} - error during processing", ex);
                 await MqttPublisher.PublishStringAsync(client, opts, $"error: {ex.Message}", true, cts.Token);
             }
 
-            LogHelper.Log(LogLevelSimple.Debug, $"Iteration {iteration} - sleeping {opts.Api.Poll_Interval_Sec}s");
+            LogHelper.Log(LogLevelSimple.Info, $"Iteration {iteration} - sleeping {opts.Api.Poll_Interval_Sec}s");
             try
             {
                 await Task.Delay(TimeSpan.FromSeconds(opts.Api.Poll_Interval_Sec), cts.Token);
@@ -87,7 +98,7 @@ public static class Program
             }
         }
 
-    LogHelper.Log(LogLevelSimple.Info, "Exited main loop. Shutting down.");
+        LogHelper.Log(LogLevelSimple.Info, "Exited main loop. Shutting down.");
     }
 }
 
@@ -110,7 +121,7 @@ static class ValueChangeTracker
         {
             if (Math.Abs(prev - value) < _epsilon)
             {
-                LogHelper.Log(LogLevelSimple.Debug, $"No change for '{slug}' (prev={prev:F6}, new={value:F6}, eps={_epsilon}) - skipping publish");
+                LogHelper.Log(LogLevelSimple.Info, $"No change for '{slug}' (prev={prev:F6}, new={value:F6}, eps={_epsilon}) - skipping publish");
                 return true;
             }
         }
@@ -119,7 +130,7 @@ static class ValueChangeTracker
     public static void Record(string slug, double value)
     {
         _last[slug] = value;
-        LogHelper.Log(LogLevelSimple.Debug, $"Published '{slug}'={value:F6}");
+        LogHelper.Log(LogLevelSimple.Info, $"Published '{slug}'={value:F6}");
     }
 }
 
