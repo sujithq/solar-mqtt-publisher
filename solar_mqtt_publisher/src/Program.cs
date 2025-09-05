@@ -10,13 +10,13 @@ public static class Program
     public static async Task Main(string[] args)
     {
 
-        // Default to Supervisor’s options file
+        // Default to Supervisorï¿½s options file
         var supervisorOptions = args.Length > 0 ? args[0] : "/data/options.json";
 
         var opts = ConfigurationLoader.Load(supervisorOptions: supervisorOptions);
-        LogHelper.Configure(opts.Log_Level);
-        var baseTopic = opts.Mqtt.Base_Topic.TrimEnd('/');
-        LogHelper.Log(LogLevelSimple.Info, $"Startup - MQTT broker={opts.Mqtt.Host}:{opts.Mqtt.Port}, base_topic={baseTopic}, poll_interval={opts.Api.Poll_Interval_Sec}s");
+        LogHelper.Configure(opts.LogLevel);
+        var baseTopic = opts.Mqtt.BaseTopic.TrimEnd('/');
+        LogHelper.Log(LogLevelSimple.Info, $"Startup - MQTT broker={opts.Mqtt.Host}:{opts.Mqtt.Port}, base_topic={baseTopic}, poll_interval={opts.Api.PollIntervalSec}s");
 
         using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; LogHelper.Log(LogLevelSimple.Info, "Cancellation requested (Ctrl+C)"); cts.Cancel(); };
@@ -32,7 +32,7 @@ public static class Program
             ValueChangeTracker.EnsureInitialized(opts);
             if (ValueChangeTracker.TrySkip(slug, val)) return;
             var msg = new MQTTnet.MqttApplicationMessageBuilder()
-                .WithTopic($"{baseTopic}/state/{opts.Device.Unique_Prefix}{slug}")
+                .WithTopic($"{baseTopic}/state/{opts.Device.UniquePrefix}{slug}")
                 .WithPayload(val.ToString(CultureInfo.InvariantCulture))
                 .WithRetainFlag(true)
                 .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce)
@@ -70,9 +70,9 @@ public static class Program
                     {
                         var totals = new
                         {
-                            solar = ApiClient.GetDouble(json, opts.Api.Fields.Solar_Total_Kwh),
-                            import_ = ApiClient.GetDouble(json, opts.Api.Fields.Grid_Import_Kwh),
-                            export_ = ApiClient.GetDouble(json, opts.Api.Fields.Grid_Export_Kwh)
+                            solar = ApiClient.GetDouble(json, opts.Api.Fields.SolarTotalKwh),
+                            import_ = ApiClient.GetDouble(json, opts.Api.Fields.GridImportKwh),
+                            export_ = ApiClient.GetDouble(json, opts.Api.Fields.GridExportKwh)
                         };
                         LogHelper.Log(LogLevelSimple.Info, $"Iteration {iteration} - fallback totals solar={totals.solar:F3} grid_import={totals.import_:F3} grid_export={totals.export_:F3}");
                         await Pub("solar_total", totals.solar);
@@ -87,10 +87,10 @@ public static class Program
                 await MqttPublisher.PublishStringAsync(client, opts, $"error: {ex.Message}", true, cts.Token);
             }
 
-            LogHelper.Log(LogLevelSimple.Info, $"Iteration {iteration} - sleeping {opts.Api.Poll_Interval_Sec}s");
+            LogHelper.Log(LogLevelSimple.Info, $"Iteration {iteration} - sleeping {opts.Api.PollIntervalSec}s");
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(opts.Api.Poll_Interval_Sec), cts.Token);
+                await Task.Delay(TimeSpan.FromSeconds(opts.Api.PollIntervalSec), cts.Token);
             }
             catch (TaskCanceledException)
             {
@@ -112,7 +112,7 @@ static class ValueChangeTracker
     {
         if (_initialized) return;
         _initialized = true;
-        if (root.Value_Eps is double eps && eps >= 0) _epsilon = eps;
+        if (root.ValueEps is double eps && eps >= 0) _epsilon = eps;
         LogHelper.Log(LogLevelSimple.Info, $"Value change detection enabled (epsilon={_epsilon})");
     }
     public static bool TrySkip(string slug, double value)

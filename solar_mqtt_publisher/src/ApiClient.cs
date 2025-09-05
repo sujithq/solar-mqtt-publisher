@@ -6,22 +6,22 @@ public static class ApiClient
 {
     public static async Task<JsonNode> FetchAsync(ApiOptions api, CancellationToken ct)
     {
-        using var handler = new HttpClientHandler { ServerCertificateCustomValidationCallback = (m, c, ch, e) => api.Verify_Ssl };
-        using var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(api.Timeout_Sec) };
+        using var handler = new HttpClientHandler { ServerCertificateCustomValidationCallback = (m, c, ch, e) => api.VerifySsl };
+        using var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(api.TimeoutSec) };
         using var req = new HttpRequestMessage(new HttpMethod(api.Method ?? "GET"), api.Url);
         if (!string.IsNullOrWhiteSpace(api.Key))
             req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", api.Key);
         if (api.Headers is not null) // merged from api.headers + api_headers[] (if provided)
             foreach (var kv in api.Headers) req.Headers.TryAddWithoutValidation(kv.Key, kv.Value);
 
-    LogHelper.Log(LogLevelSimple.Info, $"HTTP {api.Method ?? "GET"} {api.Url} timeout={api.Timeout_Sec}s verify_ssl={api.Verify_Ssl} headers={(api.Headers?.Count ?? 0)} auth={(string.IsNullOrWhiteSpace(api.Key) ? "none" : "bearer")}");
-    var sw = System.Diagnostics.Stopwatch.StartNew();
+        LogHelper.Log(LogLevelSimple.Info, $"HTTP {api.Method ?? "GET"} {api.Url} timeout={api.TimeoutSec}s verify_ssl={api.VerifySsl} headers={(api.Headers?.Count ?? 0)} auth={(string.IsNullOrWhiteSpace(api.Key) ? "none" : "bearer")}");
+        var sw = System.Diagnostics.Stopwatch.StartNew();
 
         var res = await http.SendAsync(req, ct);
         res.EnsureSuccessStatusCode();
         var json = await res.Content.ReadAsStringAsync(ct);
-    sw.Stop();
-    LogHelper.Log(LogLevelSimple.Info, $"HTTP {(int)res.StatusCode} {api.Url} in {sw.ElapsedMilliseconds} ms bytes={json.Length}");
+        sw.Stop();
+        LogHelper.Log(LogLevelSimple.Info, $"HTTP {(int)res.StatusCode} {api.Url} in {sw.ElapsedMilliseconds} ms bytes={json.Length}");
         return JsonNode.Parse(json)!;
     }
 
@@ -40,7 +40,7 @@ public static class ApiClient
     public static bool TryComputeMyEnergyTotals(JsonNode node, out double solarKwh, out double importKwh, out double exportKwh)
     {
         solarKwh = importKwh = exportKwh = 0d;
-    try
+        try
         {
             if (node is not JsonObject rootObj || rootObj.Count == 0) return false;
 

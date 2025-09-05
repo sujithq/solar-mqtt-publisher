@@ -22,30 +22,30 @@ public static class MqttPublisher
         }
 
         // Sanitized config log
-        LogHelper.Log(LogLevelSimple.Info,$"[MQTT] Attempting connection host={cfg.Host} port={cfg.Port} user={(string.IsNullOrWhiteSpace(cfg.Username) ? "<none>" : cfg.Username)}");
+        LogHelper.Log(LogLevelSimple.Info, $"[MQTT] Attempting connection host={cfg.Host} port={cfg.Port} user={(string.IsNullOrWhiteSpace(cfg.Username) ? "<none>" : cfg.Username)}");
         try
         {
             await client.ConnectAsync(Build(cfg), ct);
-            LogHelper.Log(LogLevelSimple.Info,"[MQTT] Connected on primary host.");
+            LogHelper.Log(LogLevelSimple.Info, "[MQTT] Connected on primary host.");
             return client;
         }
         catch (MQTTnet.Adapter.MqttConnectingFailedException ex) when (!string.Equals(cfg.Host, "core-mosquitto", StringComparison.OrdinalIgnoreCase))
         {
-            LogHelper.Log(LogLevelSimple.Warn,$"[MQTT] Primary connection failed ({ex.ResultCode}) - trying fallback host core-mosquitto...");
+            LogHelper.Log(LogLevelSimple.Warn, $"[MQTT] Primary connection failed ({ex.ResultCode}) - trying fallback host core-mosquitto...");
             // fallback attempt
             var originalHost = cfg.Host;
             cfg.Host = "core-mosquitto"; // mutate for fallback; acceptable since options instance not reused elsewhere for host-specific logic
             try
             {
                 await client.ConnectAsync(Build(cfg), ct);
-                LogHelper.Log(LogLevelSimple.Info,"[MQTT] Connected using fallback host core-mosquitto.");
+                LogHelper.Log(LogLevelSimple.Info, "[MQTT] Connected using fallback host core-mosquitto.");
                 return client;
             }
             catch (Exception ex2)
             {
                 // restore host before throwing
                 cfg.Host = originalHost;
-                LogHelper.Log(LogLevelSimple.Error,$"[MQTT] Fallback connection failed: {ex2.Message}");
+                LogHelper.Log(LogLevelSimple.Error, $"[MQTT] Fallback connection failed: {ex2.Message}");
                 throw; // propagate last exception
             }
         }
@@ -53,8 +53,8 @@ public static class MqttPublisher
 
     public static async Task PublishDiscoveryAsync(IMqttClient client, Options opts, CancellationToken ct)
     {
-        var baseTopic = opts.Mqtt.Base_Topic.TrimEnd('/');
-        var pref = opts.Device.Unique_Prefix;
+        var baseTopic = opts.Mqtt.BaseTopic.TrimEnd('/');
+        var pref = opts.Device.UniquePrefix;
         var device = new
         {
             identifiers = new[] { opts.Device.Identifiers },
@@ -91,7 +91,7 @@ public static class MqttPublisher
 
     public static async Task PublishStringAsync(IMqttClient client, Options opts, string payload, bool retain, CancellationToken ct)
     {
-        var baseTopic = opts.Mqtt.Base_Topic.TrimEnd('/');
+        var baseTopic = opts.Mqtt.BaseTopic.TrimEnd('/');
         await client.PublishStringAsync($"{baseTopic}/status", payload, retain: true, cancellationToken: ct);
     }
 

@@ -67,13 +67,60 @@ Assuming `base_topic=solar` and `unique_prefix=pv1_`:
 - States: `solar/state/pv1_solar_total`, `solar/state/pv1_grid_import`, `solar/state/pv1_grid_export`
 - Status / LWT: `solar/status` (payload: `online` / `offline`)
 
-## Environment Variable Overrides (optional)
+## Configuration Sources & Overrides
 
-Only an override for the Last Will topic is currently read from the environment. All other tuning (log level, epsilon) now lives in `options.json`.
+Layered precedence (later overrides earlier):
 
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `LWT_TOPIC` | Override Last Will topic (otherwise `<base_topic>/status`) | `<base_topic>/status` |
+1. `data/options.json` (required base file)
+2. User Secrets (development only, if defined) – keys like `MQTT_HOST`, `API_URL` etc.
+3. Environment variables with prefix & hierarchy: `SOLAR_MQTT__HOST`, `SOLAR_API__URL`, `SOLAR_LOG_LEVEL`, `SOLAR_VALUE_EPS`
+4. Legacy flat env vars (still honored): `MQTT_HOST`, `API_URL`, `LOG_LEVEL`, `VALUE_EPS`
+5. (Special) `LWT_TOPIC` for Last Will override.
+
+Recommended form: use the hierarchical `SOLAR_` prefixed vars in production; keep flat ones only for quick local testing.
+
+Example overrides:
+
+```bash
+SOLAR_MQTT__HOST=broker.internal \
+SOLAR_MQTT__USERNAME=solar \
+SOLAR_MQTT__PASSWORD=secret \
+SOLAR_API__URL=https://example.com/data.json \
+SOLAR_LOG_LEVEL=DEBUG \
+SOLAR_VALUE_EPS=0.01
+```
+
+Legacy equivalents (also work):
+
+```bash
+MQTT_HOST=broker.internal
+API_URL=https://example.com/data.json
+LOG_LEVEL=DEBUG
+VALUE_EPS=0.01
+```
+
+Last Will override (optional):
+
+```bash
+LWT_TOPIC=custom/solar/status
+```
+
+### `api_fields` & `api_headers`
+
+Instead of the former nested `api.fields` object you can now supply arrays:
+
+```jsonc
+"api_fields": [
+  { "name": "solar_total_kwh", "metric": "solar_energy_total_kwh" },
+  { "name": "grid_import_kwh", "metric": "grid_import_total_kwh" },
+  { "name": "grid_export_kwh", "metric": "grid_export_total_kwh" }
+],
+"api_headers": [
+  { "key": "Accept", "value": "application/json" }
+]
+```
+
+Backward compatibility: existing `api.fields` + `api.headers` still work. If `api.fields` is absent but `api_fields` exists, the mapping is synthesized automatically. Internally option properties were migrated to PascalCase (e.g. `logLevel`, `valueEps`, `mqtt.baseTopic`) but the public JSON schema keeps snake_case for stability; both legacy env var names and new hierarchical `SOLAR_` variables continue to override correctly.
 
 ## Change Detection
 
@@ -133,7 +180,7 @@ Ctrl+C triggers cancellation; the MQTT Last Will ensures `offline` if the contai
 | No updates | `value_eps` too large | Lower or unset `value_eps` |
 | Offline status stuck | Broker retained old LWT | Restart add-on to republish discovery & status |
 
-Enable debug logs: set `log_level: DEBUG` in the add-on options (UI or edit `options.json`).
+Enable debug logs: set `log_level: DEBUG` in options or export `SOLAR_LOG_LEVEL=DEBUG`.
 
 ## Security
 
