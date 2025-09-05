@@ -12,34 +12,155 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Planned: Additional optional sensors & metrics endpoint
 - Planned: Ingress panel / simple UI
 
-## [0.1.0] - 2025-09-05
+## [0.1.18] - 2025-09-05
 
-### Added (initial release)
+### Changed (docs & assets)
 
-- Initial Home Assistant add-on structure (`config.yaml`, `repository.json`)
-- MQTT publishing with retained energy totals and LWT status topic
+- Documentation refinements (`DOCS.md` formatting, added environment override clarity)
+- Synchronized internal documentation with add-on schema
+
+### Added (assets)
+
+- Project icons (`icon.png`, `logo.png`) placeholder assets
+
+## [0.1.17] - 2025-09-05
+
+### Changed (readme wording)
+
+- Minor wording improvements in README
+
+## [0.1.16] - 2025-09-05
+
+### Added (docs)
+
+- Initial `DOCS.md` comprehensive add-on documentation
+
+## [0.1.15] - 2025-09-05
+
+### Changed (options refactor)
+
+- Normalized option property names internally to PascalCase (backward compatible mapping)
+
+## [0.1.14] - 2025-09-05
+
+### Added (compat layer)
+
+- Backward compatibility layer for legacy snake_case env / JSON keys
+
+## [0.1.13] - 2025-09-05
+
+### Added (api_fields/api_headers)
+
+- Support for `api_fields` & `api_headers` array forms (synthesized to legacy structure)
+
+## [0.1.12] - 2025-09-05
+
+### Changed (epsilon logging)
+
+- Improved change detection epsilon handling and logging precision
+
+## [0.1.11] - 2025-09-05
+
+### Added (layered config)
+
+- Layered configuration loader (defaults -> options.json -> user secrets -> SOLAR_ env -> legacy env)
+
+## [0.1.10] - 2025-09-05
+
+### Added (auto-detect schema)
+
+- Auto-detection & aggregation of P/U/I JSON schema
+
+## [0.1.9] - 2025-09-05
+
+### Added (fallback mapping)
+
+- Fallback dotted path field mapping for REST payload
+
+## [0.1.8] - 2025-09-05
+
+### Added (discovery messages)
+
 - Home Assistant MQTT Discovery messages for 3 energy sensors
-- REST API polling with fallback dotted path field mapping
-- Auto-detection & aggregation of custom annual/day JSON schema (P/U/I totals)
-- Change detection with epsilon (`value_eps`) to suppress redundant publishes
-- Layered configuration loader (defaults -> /data/options.json -> user secrets -> SOLAR_ env -> legacy flat env)
-- Support for both legacy `api.fields` and new `api_fields` / `api_headers` arrays
-- Environment variable overrides (hierarchical `SOLAR_MQTT__HOST`, etc.)
-- Sample options file and security guidance
+
+## [0.1.7] - 2025-09-05
+
+### Added (MQTT publishing)
+
+- MQTT publishing with retained energy totals and LWT status topic
+
+## [0.1.6] - 2025-09-05
+
+### Added (API polling loop)
+
+- Initial REST API polling loop
+
+## [0.1.5] - 2025-09-05
+
+### Added (logging)
+
 - Basic structured logging with configurable log level
 
-### Changed
+## [0.1.4] - 2025-09-05
+
+### Security (attributes)
+
+- Added `.gitattributes` to enforce LF normalization
+
+## [0.1.3] - 2025-09-05
+
+### Security (gitignore)
+
+- Added `.gitignore` entries to prevent committing secrets
+
+## [0.1.2] - 2025-09-05
+
+### Added (sample options)
+
+- Sample options file and security guidance
+
+## [0.1.1] - 2025-09-05
+
+### Added (addon scaffold)
+
+- Initial Home Assistant add-on structure (`config.yaml`, `repository.json`)
+
+## [0.1.0] - 2025-09-05
+
+### Added (initial implementation summary)
+
+- Core scaffold & minimal functionality bootstrap
+
+### Changed (naming normalization)
 
 - Internal option property names normalized to PascalCase (backward compatible with snake_case JSON & env names)
 
-### Security
+### Security (secrets & normalization)
 
 - Added `.gitignore` entries to prevent committing secrets
 - Added `.gitattributes` to enforce LF normalization
 
-### Documentation
+### Documentation (readme)
 
 - Comprehensive README with configuration precedence and override examples
 
-[Unreleased]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.0...HEAD
+[Unreleased]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.18...HEAD
+[0.1.18]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.17...0.1.18
+[0.1.17]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.16...0.1.17
+[0.1.16]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.15...0.1.16
+[0.1.15]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.14...0.1.15
+[0.1.14]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.13...0.1.14
+[0.1.13]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.12...0.1.13
+[0.1.12]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.11...0.1.12
+[0.1.11]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.10...0.1.11
+[0.1.10]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.9...0.1.10
+[0.1.9]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.8...0.1.9
+[0.1.8]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.7...0.1.8
+[0.1.7]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.6...0.1.7
+[0.1.6]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.5...0.1.6
+[0.1.5]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.4...0.1.5
+[0.1.4]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.3...0.1.4
+[0.1.3]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.2...0.1.3
+[0.1.2]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.1...0.1.2
+[0.1.1]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.0...0.1.1
 [0.1.0]: https://github.com/sujithq/solar-mqtt-publisher/releases/tag/0.1.0

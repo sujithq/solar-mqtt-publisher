@@ -20,6 +20,8 @@ RUN case "$TARGETARCH" in \
     amd64) rid=linux-musl-x64;; \
     arm64) rid=linux-musl-arm64;; \
     armv7) rid=linux-musleabihf;; \
+    armhf) rid=linux-musleabihf;; \
+    i386)  rid=linux-musl-x86;; \
     *) rid=linux-musl-x64;; \
   esac \
   && dotnet publish SolarMqtt.csproj -c Release -r $rid \
