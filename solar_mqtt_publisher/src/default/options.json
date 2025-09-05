@@ -16,7 +16,7 @@
     "headers": { "Accept": "application/json" },
     "verify_ssl": true,
     "timeout_sec": 15,
-    "poll_interval_sec": 60
+    "poll_interval_sec": 600
   },
   "log_level": "INFO",
   "value_eps": 0.0,
