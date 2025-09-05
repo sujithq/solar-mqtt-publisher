@@ -49,9 +49,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [0.1.13] - 2025-09-05
 
-### Added (api_fields/api_headers)
+### Removed (backwards compatibility)
 
-- Support for `api_fields` & `api_headers` array forms (synthesized to legacy structure)
+- Removed legacy snake_case JSON mappings
+- Removed legacy flat environment variables (MQTT_HOST, API_URL, etc.)
+- Removed legacy array forms (api_fields, api_headers)
+- Enforced PascalCase schema across all configuration
 
 ## [0.1.12] - 2025-09-05
 
@@ -63,7 +66,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Added (layered config)
 
-- Layered configuration loader (defaults -> options.json -> user secrets -> SOLAR_ env -> legacy env)
+- Layered configuration loader (defaults -> options.json -> user secrets -> SOLAR_ env vars)
 
 ## [0.1.10] - 2025-09-05
 

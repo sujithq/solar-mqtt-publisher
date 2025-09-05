@@ -62,8 +62,6 @@ SOLAR_LOG__LEVEL=DEBUG
 SOLAR_VALUE_EPS=0.01
 ```
 
-Legacy equivalents still accepted: `MQTT_HOST`, `API_URL`, etc.
-
 ## 7. MQTT Topics
 
 Assuming `baseTopic=solar` and `uniquePrefix=pv1_`:

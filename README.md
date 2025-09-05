@@ -81,7 +81,7 @@ Assuming `baseTopic=solar` and `uniquePrefix=pv1_`:
 Layered precedence (later overrides earlier):
 
 1. `data/options.json` (required base file)
-2. User Secrets (development only, if defined) – keys like `MQTT_HOST`, `API_URL` etc.
+2. User Secrets (development only, if defined)
 3. Environment variables with prefix & hierarchy: `SOLAR_MQTT__HOST`, `SOLAR_API__URL`, `SOLAR_LOG__LEVEL`, `SOLAR_VALUE_EPS`
 4. (Special) `LWT_TOPIC` for Last Will override.
 

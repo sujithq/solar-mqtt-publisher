@@ -39,17 +39,13 @@ public static class ConfigurationLoader
 
         builder
             .AddUserSecrets(typeof(Program).Assembly, optional: true)
-            .AddEnvironmentVariables(prefix: "SOLAR_") // hierarchical: SOLAR_MQTT__HOST etc.
-            .AddEnvironmentVariables(); // allow legacy flat vars like MQTT_HOST
+            .AddEnvironmentVariables(prefix: "SOLAR_"); // hierarchical: SOLAR_MQTT__HOST etc.
 
         var cfg = builder.Build();
         var opts = new Options();
         cfg.Bind(opts); // bind whatever matches new names
 
-        // Backward compatibility: map legacy snake_case keys if present
-        // We intentionally read raw configuration values rather than environment again.
-
-        // REMOVED: All legacy mappings - enforce PascalCase schema
+        // Configuration binding - PascalCase schema enforced
 
         return opts;
     }
