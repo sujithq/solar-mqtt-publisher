@@ -20,33 +20,42 @@ Publishes solar / grid import / grid export energy totals via MQTT Discovery so 
 4. Ensure you have the MQTT integration configured in Home Assistant.
 5. After startup, three sensors should appear automatically (may take up to 30 seconds) and be selectable in the Energy Dashboard.
 
-## Configuration Options (`config.yaml`)
+## Configuration Options (`options.json`)
 
-```yaml
-mqtt:
-  host: 127.0.0.1
-  port: 1883
-  username: ""
-  password: ""
-  base_topic: "solar"          # Base under which state & status are published
-device:
-  name: "Rooftop PV"
-  manufacturer: "Custom"
-  model: "API"
-  identifiers: "pv-system-1"    # Stable unique ID for the physical system
-  unique_prefix: "pv1_"         # Prefix used in entity unique_id's
-api:
-  url: "http://host.docker.internal:8080/metrics"
-  method: GET
-  headers: {}
-  key: ""                       # Optional Bearer token
-  verify_ssl: true
-  timeout_sec: 10
-  poll_interval_sec: 60          # Seconds between polls
-  fields:                        # Used if auto-detect fails
-    solar_total_kwh: "solar_energy_total_kwh"
-    grid_import_kwh: "grid_import_total_kwh"
-    grid_export_kwh: "grid_export_total_kwh"
+```json
+{
+  "mqtt": {
+    "host": "127.0.0.1",
+    "port": 1883,
+    "username": "",
+    "password": "",
+    "baseTopic": "solar"
+  },
+  "device": {
+    "name": "Rooftop PV",
+    "manufacturer": "Custom",
+    "model": "API",
+    "identifiers": "pv-system-1",
+    "uniquePrefix": "pv1_"
+  },
+  "api": {
+    "url": "http://host.docker.internal:8080/metrics",
+    "method": "GET",
+    "headers": {},
+    "key": "",
+    "verifySsl": true,
+    "timeoutSec": 10,
+    "pollIntervalSec": 60,
+    "apiFields": {
+      "solarTotalKwh": "solar_energy_total_kwh",
+      "gridImportKwh": "grid_import_total_kwh",
+      "gridExportKwh": "grid_export_total_kwh"
+    }
+  },
+  "log": {
+    "level": "INFO"
+  }
+}
 ```
 
 ### Auto-detect vs Fallback
@@ -61,7 +70,7 @@ If that fails it resolves dotted paths defined under `api.fields`.
 
 ## MQTT Topics
 
-Assuming `base_topic=solar` and `unique_prefix=pv1_`:
+Assuming `baseTopic=solar` and `uniquePrefix=pv1_`:
 
 - Discovery configs: `homeassistant/sensor/pv1_solar_total/config` (and equivalents)
 - States: `solar/state/pv1_solar_total`, `solar/state/pv1_grid_import`, `solar/state/pv1_grid_export`
@@ -69,15 +78,18 @@ Assuming `base_topic=solar` and `unique_prefix=pv1_`:
 
 ## Environment Variable Overrides (optional)
 
-Only an override for the Last Will topic is currently read from the environment. All other tuning (log level, epsilon) now lives in `options.json`.
+Only hierarchical environment variables are supported (e.g., `SOLAR_MQTT__HOST`). Legacy flat variables have been removed to enforce PascalCase schema.
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `LWT_TOPIC` | Override Last Will topic (otherwise `<base_topic>/status`) | `<base_topic>/status` |
+| `SOLAR_MQTT__HOST` | MQTT broker host | `127.0.0.1` |
+| `SOLAR_MQTT__PORT` | MQTT broker port | `1883` |
+| `SOLAR_API__URL` | API endpoint URL | (none) |
+| `LWT_TOPIC` | Override Last Will topic | `<baseTopic>/status` |
 
 ## Change Detection
 
-Values are only published when: `abs(new - prev) >= value_eps` where `value_eps` is the floating value in `options.json` (default 0). This reduces retained message churn.
+Values are only published when: `abs(new - prev) >= valueEps` where `valueEps` is the floating value in `options.json` (default 0). This reduces retained message churn.
 
 ## Build Locally
 
@@ -99,7 +111,7 @@ Create & bind an options file (edit for your broker & API):
 mkdir -p data
 cp sample-options.json data/options.json
 sed -i 's/"host": "127.0.0.1"/"host": "mqtt.local"/' data/options.json
-sed -i 's/"log_level": "INFO"/"log_level": "DEBUG"/' data/options.json # enable debug
+sed -i 's/"level": "INFO"/"level": "DEBUG"/' data/options.json # enable debug
 docker run --rm -v $PWD/data:/data solar-mqtt-publisher:dev
 ```
 
@@ -133,7 +145,7 @@ Ctrl+C triggers cancellation; the MQTT Last Will ensures `offline` if the contai
 | No updates | `value_eps` too large | Lower or unset `value_eps` |
 | Offline status stuck | Broker retained old LWT | Restart add-on to republish discovery & status |
 
-Enable debug logs: set `log_level: DEBUG` in the add-on options (UI or edit `options.json`).
+Enable debug logs: set `level: DEBUG` in the add-on options (UI or edit `options.json`).
 
 ## Security
 

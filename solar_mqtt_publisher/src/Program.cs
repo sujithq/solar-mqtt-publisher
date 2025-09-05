@@ -16,7 +16,7 @@ public static class Program
         var opts = ConfigurationLoader.Load(supervisorOptions: supervisorOptions);
         LogHelper.Configure(opts.LogLevel);
         var baseTopic = opts.Mqtt.BaseTopic.TrimEnd('/');
-        LogHelper.Log(LogLevelSimple.Info, $"Startup - MQTT broker={opts.Mqtt.Host}:{opts.Mqtt.Port}, base_topic={baseTopic}, poll_interval={opts.Api.PollIntervalSec}s");
+        LogHelper.Log(LogLevelSimple.Info, $"Startup - MQTT broker={opts.Mqtt.Host}:{opts.Mqtt.Port}, baseTopic={baseTopic}, pollIntervalSec={opts.Api.PollIntervalSec}s");
 
         using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; LogHelper.Log(LogLevelSimple.Info, "Cancellation requested (Ctrl+C)"); cts.Cancel(); };
@@ -64,7 +64,7 @@ public static class Program
                 {
                     if (opts.Api.Fields is null)
                     {
-                        LogHelper.Log(LogLevelSimple.Warn, $"Iteration {iteration} - no field mapping (api.fields/api_fields) present; skipping publish");
+                        LogHelper.Log(LogLevelSimple.Warn, $"Iteration {iteration} - no field mapping (apiFields) present; skipping publish");
                     }
                     else
                     {

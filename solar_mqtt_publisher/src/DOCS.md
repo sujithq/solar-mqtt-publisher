@@ -9,45 +9,47 @@ Publishes solar energy totals (solar generation, grid import, grid export) to Ho
 1. Start add-on → load layered configuration.
 2. Connect to MQTT (fallback to `core-mosquitto` if primary fails).
 3. Publish Home Assistant Discovery configs + retained `status` (online / offline) topic.
-4. Poll external HTTP API at `poll_interval_sec`.
+4. Poll external HTTP API at `pollIntervalSec`.
 5. Auto-detect totals (P/U/I schema) or fall back to explicit mapping.
-6. Publish only when delta ≥ `value_eps`.
+6. Publish only when delta ≥ `valueEps`.
 
 ## 3. Configuration Layers (lowest precedence first)
 
 1. Embedded defaults (`default/options.json`).
 2. Supervisor `/data/options.json` (from add-on UI save).
 3. User Secrets (development only, if present).
-4. Prefixed hierarchical env vars: `SOLAR_MQTT__HOST`, `SOLAR_API__URL`, `SOLAR_LOG_LEVEL`, `SOLAR_VALUE_EPS`.
-5. Legacy flat env vars: `MQTT_HOST`, `API_URL`, `LOG_LEVEL`, `VALUE_EPS`.
-6. `LWT_TOPIC` (special override for status topic name only).
+4. Prefixed hierarchical env vars: `SOLAR_MQTT__HOST`, `SOLAR_API__URL`, `SOLAR_LOG__LEVEL`, `SOLAR_VALUE_EPS`.
+5. `LWT_TOPIC` (special override for status topic name only).
 
 The add-on UI exposes a minimal subset; advanced fields require editing `/data/options.json` or using env overrides.
 
 ## 4. options.json Fields (sample summary)
 
 ```text
-log_level: INFO|DEBUG|TRACE|WARN|ERROR
-value_eps: double (minimum change required to republish)
-mqtt.*: host / port / username / password / base_topic
-device.*: name / manufacturer / model / identifiers / unique_prefix
-api.*: url / method / headers / verify_ssl / timeout_sec / poll_interval_sec
-api.fields.* OR api_fields[] (manual mapping)
+logLevel: INFO|DEBUG|TRACE|WARN|ERROR
+valueEps: double (minimum change required to republish)
+mqtt.*: host / port / username / password / baseTopic
+device.*: name / manufacturer / model / identifiers / uniquePrefix
+api.*: url / method / headers / verifySsl / timeoutSec / pollIntervalSec
+api.fields.* OR apiFields[] (manual mapping)
 ```
 
-## 5. New Array Form (Preferred)
+## 5. Array Form Configuration
 
-Instead of `api.fields` use:
+Use PascalCase arrays for field mapping and headers:
 
 ```jsonc
-"api_fields": [
-  { "name": "solar_total_kwh", "metric": "solar_energy_total_kwh" },
-  { "name": "grid_import_kwh", "metric": "grid_import_total_kwh" },
-  { "name": "grid_export_kwh", "metric": "grid_export_total_kwh" }
+"apiFields": [
+  { "name": "solarTotalKwh", "metric": "solar_energy_total_kwh" },
+  { "name": "gridImportKwh", "metric": "grid_import_total_kwh" },
+  { "name": "gridExportKwh", "metric": "grid_export_total_kwh" }
+],
+"apiHeaders": [
+  { "key": "Accept", "value": "application/json" }
 ]
 ```
 
-If `api.fields` is missing and `api_fields` exists, mapping is synthesized. `api_headers` merges into `api.headers`.
+These arrays provide manual mapping when auto-detection fails.
 
 ## 6. Environment Override Examples
 
@@ -56,7 +58,7 @@ SOLAR_MQTT__HOST=broker.internal
 SOLAR_MQTT__USERNAME=solar
 SOLAR_MQTT__PASSWORD=secret
 SOLAR_API__URL=https://example.com/data.json
-SOLAR_LOG_LEVEL=DEBUG
+SOLAR_LOG__LEVEL=DEBUG
 SOLAR_VALUE_EPS=0.01
 ```
 
@@ -64,7 +66,7 @@ Legacy equivalents still accepted: `MQTT_HOST`, `API_URL`, etc.
 
 ## 7. MQTT Topics
 
-Assuming `base_topic=solar` and `unique_prefix=pv1_`:
+Assuming `baseTopic=solar` and `uniquePrefix=pv1_`:
 
 ```text
 homeassistant/sensor/pv1_solar_total/config
@@ -78,15 +80,15 @@ solar/status (online|offline)
 
 ## 8. Change Detection
 
-Publishing skipped when `abs(new - previous) < value_eps`. Set `value_eps=0.0` to publish every poll.
+Publishing skipped when `abs(new - previous) < valueEps`. Set `valueEps=0.0` to publish every poll.
 
 ## 9. Auto-detection vs Manual Fields
 
-If the API root is a dictionary of years pointing to arrays of objects containing `P` (solar kWh), `U` (import kWh), `I` (export Wh) the totals are auto-summed (export converted to kWh). Otherwise provide manual mapping (`api.fields` or `api_fields`).
+If the API root is a dictionary of years pointing to arrays of objects containing `P` (solar kWh), `U` (import kWh), `I` (export Wh) the totals are auto-summed (export converted to kWh). Otherwise provide manual mapping using `apiFields`.
 
 ## 10. Timeouts & SSL
 
-`timeout_sec` controls HTTP timeout. `verify_ssl=false` disables certificate validation (dev only).
+`timeoutSec` controls HTTP timeout. `verifySsl=false` disables certificate validation (dev only).
 
 ## 11. Status / Last Will
 
@@ -103,10 +105,10 @@ LWT payload `offline` is set (topic: `solar/status` or custom `LWT_TOPIC`). On s
 | Symptom | Likely Cause | Action |
 |---------|--------------|--------|
 | Sensors not discovered | MQTT discovery disabled | Enable discovery in HA MQTT integration |
-| Values never change | `value_eps` too high | Lower `value_eps` |
+| Values never change | `valueEps` too high | Lower `valueEps` |
 | All zeros | Bad field paths | Check logs / adjust mapping |
 | Offline status | Retained old LWT | Restart add-on |
-| HTTP errors | Bad URL / timeout | Verify URL, raise `timeout_sec` |
+| HTTP errors | Bad URL / timeout | Verify URL, raise `timeoutSec` |
 
 ## 14. Updating Configuration Safely
 
@@ -138,11 +140,11 @@ Include when filing issues:
 
 ```json
 {
-  "log_level": "INFO",
-  "value_eps": 0.0,
-  "mqtt": { "host": "core-mosquitto", "port": 1883, "username": "", "password": "", "base_topic": "solar" },
-  "device": { "name": "Rooftop PV", "identifiers": "pv-system-1", "unique_prefix": "pv1_" },
-  "api": { "url": "http://host.docker.internal:8080/metrics", "poll_interval_sec": 60, "timeout_sec": 10 }
+  "logLevel": "INFO",
+  "valueEps": 0.0,
+  "mqtt": { "host": "core-mosquitto", "port": 1883, "username": "", "password": "", "baseTopic": "solar" },
+  "device": { "name": "Rooftop PV", "identifiers": "pv-system-1", "uniquePrefix": "pv1_" },
+  "api": { "url": "http://host.docker.internal:8080/metrics", "pollIntervalSec": 60, "timeoutSec": 10 }
 }
 ```
 

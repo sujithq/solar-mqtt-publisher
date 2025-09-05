@@ -14,7 +14,7 @@ public static class ApiClient
         if (api.Headers is not null) // merged from api.headers + api_headers[] (if provided)
             foreach (var kv in api.Headers) req.Headers.TryAddWithoutValidation(kv.Key, kv.Value);
 
-        LogHelper.Log(LogLevelSimple.Info, $"HTTP {api.Method ?? "GET"} {api.Url} timeout={api.TimeoutSec}s verify_ssl={api.VerifySsl} headers={(api.Headers?.Count ?? 0)} auth={(string.IsNullOrWhiteSpace(api.Key) ? "none" : "bearer")}");
+        LogHelper.Log(LogLevelSimple.Info, $"HTTP {api.Method ?? "GET"} {api.Url} timeoutSec={api.TimeoutSec}s verifySsl={api.VerifySsl} headers={(api.Headers?.Count ?? 0)} auth={(string.IsNullOrWhiteSpace(api.Key) ? "none" : "bearer")}");
         var sw = System.Diagnostics.Stopwatch.StartNew();
 
         var res = await http.SendAsync(req, ct);

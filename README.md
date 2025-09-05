@@ -20,33 +20,42 @@ Publishes solar / grid import / grid export energy totals via MQTT Discovery so 
 4. Ensure you have the MQTT integration configured in Home Assistant.
 5. After startup, three sensors should appear automatically (may take up to 30 seconds) and be selectable in the Energy Dashboard.
 
-## Configuration Options (`config.yaml`)
+## Configuration Options (`options.json`)
 
-```yaml
-mqtt:
-  host: 127.0.0.1
-  port: 1883
-  username: ""
-  password: ""
-  base_topic: "solar"          # Base under which state & status are published
-device:
-  name: "Rooftop PV"
-  manufacturer: "Custom"
-  model: "API"
-  identifiers: "pv-system-1"    # Stable unique ID for the physical system
-  unique_prefix: "pv1_"         # Prefix used in entity unique_id's
-api:
-  url: "http://host.docker.internal:8080/metrics"
-  method: GET
-  headers: {}
-  key: ""                       # Optional Bearer token
-  verify_ssl: true
-  timeout_sec: 10
-  poll_interval_sec: 60          # Seconds between polls
-  fields:                        # Used if auto-detect fails
-    solar_total_kwh: "solar_energy_total_kwh"
-    grid_import_kwh: "grid_import_total_kwh"
-    grid_export_kwh: "grid_export_total_kwh"
+```json
+{
+  "mqtt": {
+    "host": "127.0.0.1",
+    "port": 1883,
+    "username": "",
+    "password": "",
+    "baseTopic": "solar"
+  },
+  "device": {
+    "name": "Rooftop PV",
+    "manufacturer": "Custom",
+    "model": "API",
+    "identifiers": "pv-system-1",
+    "uniquePrefix": "pv1_"
+  },
+  "api": {
+    "url": "http://host.docker.internal:8080/metrics",
+    "method": "GET",
+    "headers": {},
+    "key": "",
+    "verifySsl": true,
+    "timeoutSec": 10,
+    "pollIntervalSec": 60,
+    "apiFields": {
+      "solarTotalKwh": "solar_energy_total_kwh",
+      "gridImportKwh": "grid_import_total_kwh",
+      "gridExportKwh": "grid_export_total_kwh"
+    }
+  },
+  "log": {
+    "level": "INFO"
+  }
+}
 ```
 
 ### Auto-detect vs Fallback
@@ -61,7 +70,7 @@ If that fails it resolves dotted paths defined under `api.fields`.
 
 ## MQTT Topics
 
-Assuming `base_topic=solar` and `unique_prefix=pv1_`:
+Assuming `baseTopic=solar` and `uniquePrefix=pv1_`:
 
 - Discovery configs: `homeassistant/sensor/pv1_solar_total/config` (and equivalents)
 - States: `solar/state/pv1_solar_total`, `solar/state/pv1_grid_import`, `solar/state/pv1_grid_export`
@@ -73,11 +82,10 @@ Layered precedence (later overrides earlier):
 
 1. `data/options.json` (required base file)
 2. User Secrets (development only, if defined) – keys like `MQTT_HOST`, `API_URL` etc.
-3. Environment variables with prefix & hierarchy: `SOLAR_MQTT__HOST`, `SOLAR_API__URL`, `SOLAR_LOG_LEVEL`, `SOLAR_VALUE_EPS`
-4. Legacy flat env vars (still honored): `MQTT_HOST`, `API_URL`, `LOG_LEVEL`, `VALUE_EPS`
-5. (Special) `LWT_TOPIC` for Last Will override.
+3. Environment variables with prefix & hierarchy: `SOLAR_MQTT__HOST`, `SOLAR_API__URL`, `SOLAR_LOG__LEVEL`, `SOLAR_VALUE_EPS`
+4. (Special) `LWT_TOPIC` for Last Will override.
 
-Recommended form: use the hierarchical `SOLAR_` prefixed vars in production; keep flat ones only for quick local testing.
+Recommended form: use the hierarchical `SOLAR_` prefixed vars in production.
 
 Example overrides:
 
@@ -86,17 +94,8 @@ SOLAR_MQTT__HOST=broker.internal \
 SOLAR_MQTT__USERNAME=solar \
 SOLAR_MQTT__PASSWORD=secret \
 SOLAR_API__URL=https://example.com/data.json \
-SOLAR_LOG_LEVEL=DEBUG \
+SOLAR_LOG__LEVEL=DEBUG \
 SOLAR_VALUE_EPS=0.01
-```
-
-Legacy equivalents (also work):
-
-```bash
-MQTT_HOST=broker.internal
-API_URL=https://example.com/data.json
-LOG_LEVEL=DEBUG
-VALUE_EPS=0.01
 ```
 
 Last Will override (optional):
@@ -105,26 +104,26 @@ Last Will override (optional):
 LWT_TOPIC=custom/solar/status
 ```
 
-### `api_fields` & `api_headers`
+### `apiFields` & `apiHeaders`
 
-Instead of the former nested `api.fields` object you can now supply arrays:
+The configuration uses PascalCase arrays for field mapping and headers:
 
 ```jsonc
-"api_fields": [
-  { "name": "solar_total_kwh", "metric": "solar_energy_total_kwh" },
-  { "name": "grid_import_kwh", "metric": "grid_import_total_kwh" },
-  { "name": "grid_export_kwh", "metric": "grid_export_total_kwh" }
+"apiFields": [
+  { "name": "solarTotalKwh", "metric": "solar_energy_total_kwh" },
+  { "name": "gridImportKwh", "metric": "grid_import_total_kwh" },
+  { "name": "gridExportKwh", "metric": "grid_export_total_kwh" }
 ],
-"api_headers": [
+"apiHeaders": [
   { "key": "Accept", "value": "application/json" }
 ]
 ```
 
-Backward compatibility: existing `api.fields` + `api.headers` still work. If `api.fields` is absent but `api_fields` exists, the mapping is synthesized automatically. Internally option properties were migrated to PascalCase (e.g. `logLevel`, `valueEps`, `mqtt.baseTopic`) but the public JSON schema keeps snake_case for stability; both legacy env var names and new hierarchical `SOLAR_` variables continue to override correctly.
+These arrays provide manual mapping when auto-detection fails and allow custom HTTP headers for API requests.
 
 ## Change Detection
 
-Values are only published when: `abs(new - prev) >= value_eps` where `value_eps` is the floating value in `options.json` (default 0). This reduces retained message churn.
+Values are only published when: `abs(new - prev) >= valueEps` where `valueEps` is the floating value in `options.json` (default 0). This reduces retained message churn.
 
 ## Build Locally
 
@@ -146,7 +145,7 @@ Create & bind an options file (edit for your broker & API):
 mkdir -p data
 cp sample-options.json data/options.json
 sed -i 's/"host": "127.0.0.1"/"host": "mqtt.local"/' data/options.json
-sed -i 's/"log_level": "INFO"/"log_level": "DEBUG"/' data/options.json # enable debug
+sed -i 's/"level": "INFO"/"level": "DEBUG"/' data/options.json # enable debug
 docker run --rm -v $PWD/data:/data solar-mqtt-publisher:dev
 ```
 
@@ -177,10 +176,10 @@ Ctrl+C triggers cancellation; the MQTT Last Will ensures `offline` if the contai
 |---------|----------------|--------|
 | Sensors not appearing | MQTT Discovery disabled | Ensure HA MQTT integration "Enable discovery" is on |
 | All zeros | Wrong JSON schema | Check logged auto-detect fallbacks and confirm field paths |
-| No updates | `value_eps` too large | Lower or unset `value_eps` |
+| No updates | `valueEps` too large | Lower or unset `valueEps` |
 | Offline status stuck | Broker retained old LWT | Restart add-on to republish discovery & status |
 
-Enable debug logs: set `log_level: DEBUG` in options or export `SOLAR_LOG_LEVEL=DEBUG`.
+Enable debug logs: set `level: DEBUG` in options or export `SOLAR_LOG__LEVEL=DEBUG`.
 
 ## Security
 
