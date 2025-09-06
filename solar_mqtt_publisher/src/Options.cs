@@ -9,38 +9,51 @@ public sealed class Options
     public double? ValueEps { get; set; }
 
     // New array-based configuration (preferred)
-    public ApiField[]? ApiFields { get; set; }
-    public ApiHeader[]? ApiHeaders { get; set; }
+    public ApiField[]? ApiFields { get; set; } =
+    [
+        new() { Name = "solar_total_kwh", Metric = "solar_energy_total_kwh" },
+        new() { Name = "grid_import_kwh", Metric = "grid_import_total_kwh" },
+        new() { Name = "grid_export_kwh", Metric = "grid_export_total_kwh" }
+    ];
+    public ApiHeader[]? ApiHeaders { get; set; } =
+    [
+        new() { Key = "Accept", Value = "application/json" }
+    ];
 }
 
 public sealed class MqttOptions
 {
     public string Host { get; set; } = "localhost";
     public int Port { get; set; } = 1883;
-    public string? Username { get; set; }
+    public string? Username { get; set; } = "mqtt_solar";
     public string? Password { get; set; }
     public string BaseTopic { get; set; } = "solar";
 }
 
 public sealed class DeviceOptions
 {
-    public string Name { get; set; } = "Device";
-    public string? Manufacturer { get; set; }
-    public string? Model { get; set; }
-    public string Identifiers { get; set; } = "device-1";
-    public string UniquePrefix { get; set; } = "dev1_";
+    public string Name { get; set; } = "Rooftop PV";
+    public string? Manufacturer { get; set; } = "Custom";
+    public string? Model { get; set; } = "API";
+    public string Identifiers { get; set; } = "pv-system-1";
+    public string UniquePrefix { get; set; } = "pv1_";
 }
 
 public sealed class ApiOptions
 {
     public string Url { get; set; } = string.Empty;
     public string Method { get; set; } = "GET";
-    public Dictionary<string, string>? Headers { get; set; }
+    public Dictionary<string, string>? Headers { get; set; } = new Dictionary<string, string>() { { "Accept","application/json" } };
     public string? Key { get; set; }
     public bool VerifySsl { get; set; } = true;
-    public int TimeoutSec { get; set; } = 10;
-    public int PollIntervalSec { get; set; } = 900;
-    public FieldsOptions? Fields { get; set; }
+    public int TimeoutSec { get; set; } = 15;
+    public int PollIntervalSec { get; set; } = 600;
+    public FieldsOptions? Fields { get; set; } = new FieldsOptions
+    {
+        SolarTotalKwh = "solar_energy_total_kwh",
+        GridImportKwh = "grid_import_total_kwh",
+        GridExportKwh = "grid_export_total_kwh"
+    };
 }
 
 public sealed class FieldsOptions
