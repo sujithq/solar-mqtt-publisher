@@ -38,8 +38,7 @@ public static class ConfigurationLoader
         }
 
         builder
-            .AddUserSecrets(typeof(Program).Assembly, optional: true)
-            .AddEnvironmentVariables(prefix: "SOLAR_"); // hierarchical: SOLAR_MQTT__HOST etc.
+            .AddUserSecrets(typeof(Program).Assembly, optional: true);
 
         var cfg = builder.Build();
         var opts = new Options();
