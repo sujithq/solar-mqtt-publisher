@@ -29,7 +29,8 @@ Publishes solar / grid import / grid export energy totals via MQTT Discovery so 
     "port": 1883,
     "username": "",
     "password": "",
-    "baseTopic": "solar"
+  "baseTopic": "solar",
+  "lastWillTopic": "solar/status"
   },
   "device": {
     "name": "Rooftop PV",
@@ -76,16 +77,9 @@ Assuming `baseTopic=solar` and `uniquePrefix=pv1_`:
 - States: `solar/state/pv1_solar_total`, `solar/state/pv1_grid_import`, `solar/state/pv1_grid_export`
 - Status / LWT: `solar/status` (payload: `online` / `offline`)
 
-## Environment Variable Overrides (optional)
+## Configuration Source
 
-Only hierarchical environment variables are supported (e.g., `SOLAR_MQTT__HOST`). Legacy flat variables have been removed to enforce PascalCase schema.
-
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `SOLAR_MQTT__HOST` | MQTT broker host | `127.0.0.1` |
-| `SOLAR_MQTT__PORT` | MQTT broker port | `1883` |
-| `SOLAR_API__URL` | API endpoint URL | (none) |
-| `LWT_TOPIC` | Override Last Will topic | `<baseTopic>/status` |
+All configuration is now file-based for deterministic deployments. Modify `/data/options.json` (copied from `sample-options.json`). Environment variable overrides (including `SOLAR_*` and `LWT_TOPIC`) have been removed. To change the Last Will topic set `mqtt.lastWillTopic`.
 
 ## Change Detection
 

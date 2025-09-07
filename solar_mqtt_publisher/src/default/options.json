@@ -2,7 +2,8 @@
   "mqtt": {
     "port": 1883,
     "username": "mqtt_solar",
-    "baseTopic": "solar"
+  "baseTopic": "solar",
+  "lastWillTopic": "solar/status"
   },
   "device": {
     "name": "Rooftop PV",

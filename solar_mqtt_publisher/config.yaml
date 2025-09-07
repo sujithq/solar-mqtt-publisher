@@ -1,6 +1,6 @@
 name: "Solar MQTT Publisher"
 description: Publishes solar/grid energy totals to Home Assistant via MQTT Discovery for the Energy Dashboard.
-version: "0.1.20"
+version: "0.1.21"
 slug: solar_mqtt_publisher
 init: false
 arch:

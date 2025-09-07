@@ -6,7 +6,8 @@
     "port": 1883,
     "username": "",
     "password": "",
-    "baseTopic": "solar"
+  "baseTopic": "solar",
+  "lastWillTopic": "solar/status"
   },
   "device": {
     "name": "Rooftop PV",

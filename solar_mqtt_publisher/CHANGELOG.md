@@ -6,6 +6,21 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [0.1.20] - 2025-09-07
+
+### Removed
+
+- Environment variable configuration layer (`SOLAR_*` and `LWT_TOPIC`). All configuration now sourced exclusively from JSON files (`default/options.json` layered with `/data/options.json` and optional user secrets during development).
+
+### Added
+
+- `mqtt.lastWillTopic` JSON property replacing prior `LWT_TOPIC` environment variable.
+
+### Changed
+
+- Documentation (`README.md`, `DOCS.md`) updated to reflect JSON-only configuration model.
+
+
 ### Added (roadmap)
 
 - Planned: TLS / client cert support for MQTT
@@ -147,7 +162,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - Comprehensive README with configuration precedence and override examples
 
-[Unreleased]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.18...HEAD
+[Unreleased]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.20...HEAD
+[0.1.20]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.18...0.1.20
 [0.1.18]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.17...0.1.18
 [0.1.17]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.16...0.1.17
 [0.1.16]: https://github.com/sujithq/solar-mqtt-publisher/compare/0.1.15...0.1.16

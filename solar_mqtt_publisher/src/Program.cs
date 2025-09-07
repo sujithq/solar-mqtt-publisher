@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using MQTTnet.Client;
 using System.Globalization;
 using System.Collections.Generic;
+using Microsoft.Extensions.Configuration;
 
 public static class Program
 {
@@ -13,26 +14,29 @@ public static class Program
         // Default to Supervisor�s options file
         var supervisorOptions = args.Length > 0 ? args[0] : "/data/options.json";
 
-        var opts = ConfigurationLoader.Load(supervisorOptions: supervisorOptions);
-        LogHelper.Configure(opts.LogLevel);
-        var baseTopic = opts.Mqtt.BaseTopic.TrimEnd('/');
-        LogHelper.Log(LogLevelSimple.Info, $"Startup - MQTT broker={opts.Mqtt.Host}:{opts.Mqtt.Port}, baseTopic={baseTopic}, pollIntervalSec={opts.Api.PollIntervalSec}s");
+    var cfg = ConfigurationLoader.Load(supervisorOptions: supervisorOptions);
+    LogHelper.Configure(cfg["logLevel"] ?? cfg["log:level"]); // support both styles
+    var baseTopic = (cfg["mqtt:baseTopic"] ?? "solar").TrimEnd('/');
+    var host = cfg["mqtt:host"] ?? "localhost";
+    var port = cfg["mqtt:port"] ?? "1883";
+    var poll = int.TryParse(cfg["api:pollIntervalSec"], out var pi) ? pi : 600;
+    LogHelper.Log(LogLevelSimple.Info, $"Startup - MQTT broker={host}:{port}, baseTopic={baseTopic}, pollIntervalSec={poll}s");
 
         using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; LogHelper.Log(LogLevelSimple.Info, "Cancellation requested (Ctrl+C)"); cts.Cancel(); };
 
         LogHelper.Log(LogLevelSimple.Info, "Connecting to MQTT broker...");
-        var client = await MqttPublisher.ConnectAsync(opts.Mqtt, cts.Token);
+    var client = await MqttPublisher.ConnectAsync(cfg, cts.Token);
         LogHelper.Log(LogLevelSimple.Info, "Connected to MQTT broker.");
-        await MqttPublisher.PublishDiscoveryAsync(client, opts, cts.Token);
+    await MqttPublisher.PublishDiscoveryAsync(client, cfg, cts.Token);
         LogHelper.Log(LogLevelSimple.Info, "Home Assistant discovery messages published.");
 
         async Task Pub(string slug, double val)
         {
-            ValueChangeTracker.EnsureInitialized(opts);
+            ValueChangeTracker.EnsureInitialized(cfg);
             if (ValueChangeTracker.TrySkip(slug, val)) return;
             var msg = new MQTTnet.MqttApplicationMessageBuilder()
-                .WithTopic($"{baseTopic}/state/{opts.Device.UniquePrefix}{slug}")
+                .WithTopic($"{baseTopic}/state/{(cfg["device:uniquePrefix"] ?? "pv1_")}{slug}")
                 .WithPayload(val.ToString(CultureInfo.InvariantCulture))
                 .WithRetainFlag(true)
                 .WithQualityOfServiceLevel(MQTTnet.Protocol.MqttQualityOfServiceLevel.AtLeastOnce)
@@ -49,7 +53,8 @@ public static class Program
                 iteration++;
                 var sw = Stopwatch.StartNew();
                 LogHelper.Log(LogLevelSimple.Info, $"Iteration {iteration} - fetching API data...");
-                var json = await ApiClient.FetchAsync(opts.Api, cts.Token);
+                var apiSection = cfg.GetSection("api");
+                var json = await ApiClient.FetchAsync(apiSection, cts.Token);
                 sw.Stop();
                 LogHelper.Log(LogLevelSimple.Info, $"Iteration {iteration} - fetch completed in {sw.ElapsedMilliseconds} ms");
 
@@ -62,17 +67,21 @@ public static class Program
                 }
                 else
                 {
-                    if (opts.Api.Fields is null)
+                    var fieldsSection = apiSection.GetSection("fields");
+                    if (!fieldsSection.Exists())
                     {
                         LogHelper.Log(LogLevelSimple.Warn, $"Iteration {iteration} - no field mapping (apiFields) present; skipping publish");
                     }
                     else
                     {
+                        var solarPath = fieldsSection["solarTotalKwh"] ?? fieldsSection["SolarTotalKwh"] ?? "solar_energy_total_kwh";
+                        var importPath = fieldsSection["gridImportKwh"] ?? fieldsSection["GridImportKwh"] ?? "grid_import_total_kwh";
+                        var exportPath = fieldsSection["gridExportKwh"] ?? fieldsSection["GridExportKwh"] ?? "grid_export_total_kwh";
                         var totals = new
                         {
-                            solar = ApiClient.GetDouble(json, opts.Api.Fields.SolarTotalKwh),
-                            import_ = ApiClient.GetDouble(json, opts.Api.Fields.GridImportKwh),
-                            export_ = ApiClient.GetDouble(json, opts.Api.Fields.GridExportKwh)
+                            solar = ApiClient.GetDouble(json, solarPath),
+                            import_ = ApiClient.GetDouble(json, importPath),
+                            export_ = ApiClient.GetDouble(json, exportPath)
                         };
                         LogHelper.Log(LogLevelSimple.Info, $"Iteration {iteration} - fallback totals solar={totals.solar:F3} grid_import={totals.import_:F3} grid_export={totals.export_:F3}");
                         await Pub("solar_total", totals.solar);
@@ -84,13 +93,13 @@ public static class Program
             catch (Exception ex)
             {
                 LogHelper.Log(LogLevelSimple.Warn, $"Iteration {iteration} - error during processing", ex);
-                await MqttPublisher.PublishStringAsync(client, opts, $"error: {ex.Message}", true, cts.Token);
+                await MqttPublisher.PublishStringAsync(client, cfg, $"error: {ex.Message}", true, cts.Token);
             }
 
-            LogHelper.Log(LogLevelSimple.Info, $"Iteration {iteration} - sleeping {opts.Api.PollIntervalSec}s");
+            LogHelper.Log(LogLevelSimple.Info, $"Iteration {iteration} - sleeping {poll}s");
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(opts.Api.PollIntervalSec), cts.Token);
+                await Task.Delay(TimeSpan.FromSeconds(poll), cts.Token);
             }
             catch (TaskCanceledException)
             {
@@ -108,11 +117,11 @@ static class ValueChangeTracker
     private static readonly Dictionary<string, double> _last = new();
     private static bool _initialized = false;
     private static double _epsilon = 0d; // default exact comparison
-    public static void EnsureInitialized(Options root)
+    public static void EnsureInitialized(IConfiguration cfg)
     {
         if (_initialized) return;
         _initialized = true;
-        if (root.ValueEps is double eps && eps >= 0) _epsilon = eps;
+        if (double.TryParse(cfg["valueEps"], NumberStyles.Float, CultureInfo.InvariantCulture, out var eps) && eps >= 0) _epsilon = eps;
         LogHelper.Log(LogLevelSimple.Info, $"Value change detection enabled (epsilon={_epsilon})");
     }
     public static bool TrySkip(string slug, double value)

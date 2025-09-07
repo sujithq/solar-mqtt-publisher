@@ -4,7 +4,7 @@ public static class ConfigurationLoader
 {
     // Build layered configuration and bind to Options POCO
     // Default path uses correct folder casing for Linux (case-sensitive FS)
-    public static Options Load(string? basePath = null, string defaultOptions = "default/options.json", string supervisorOptions = "/data/options.json")
+    public static IConfiguration Load(string? basePath = null, string defaultOptions = "default/options.json", string supervisorOptions = "/data/options.json")
     {
         basePath ??= AppContext.BaseDirectory;
 
@@ -38,15 +38,9 @@ public static class ConfigurationLoader
         }
 
         builder
-            .AddUserSecrets(typeof(Program).Assembly, optional: true)
-            .AddEnvironmentVariables(prefix: "SOLAR_"); // hierarchical: SOLAR_MQTT__HOST etc.
+            .AddUserSecrets(typeof(Program).Assembly, optional: true); // Environment variables removed (all config via JSON files)
 
-        var cfg = builder.Build();
-        var opts = new Options();
-        cfg.Bind(opts); // bind whatever matches new names
-
-        // Configuration binding - PascalCase schema enforced
-
-        return opts;
+    // Build and return configuration root (no POCO binding)
+    return builder.Build();
     }
 }

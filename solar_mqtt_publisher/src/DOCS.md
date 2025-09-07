@@ -18,8 +18,8 @@ Publishes solar energy totals (solar generation, grid import, grid export) to Ho
 1. Embedded defaults (`default/options.json`).
 2. Supervisor `/data/options.json` (from add-on UI save).
 3. User Secrets (development only, if present).
-4. Prefixed hierarchical env vars: `SOLAR_MQTT__HOST`, `SOLAR_API__URL`, `SOLAR_LOG__LEVEL`, `SOLAR_VALUE_EPS`.
-5. `LWT_TOPIC` (special override for status topic name only).
+4. (Removed) Environment variable overrides have been deprecated; all configuration must reside in JSON files.
+5. `mqtt.lastWillTopic` (JSON field replacing prior `LWT_TOPIC` env variable) controls status topic.
 
 The add-on UI exposes a minimal subset; advanced fields require editing `/data/options.json` or using env overrides.
 
@@ -51,16 +51,9 @@ Use PascalCase arrays for field mapping and headers:
 
 These arrays provide manual mapping when auto-detection fails.
 
-## 6. Environment Override Examples
+## 6. (Removed) Environment Overrides
 
-```bash
-SOLAR_MQTT__HOST=broker.internal
-SOLAR_MQTT__USERNAME=solar
-SOLAR_MQTT__PASSWORD=secret
-SOLAR_API__URL=https://example.com/data.json
-SOLAR_LOG__LEVEL=DEBUG
-SOLAR_VALUE_EPS=0.01
-```
+Previous versions supported environment variable overrides prefixed with `SOLAR_` and a standalone `LWT_TOPIC`. These have been removed for deterministic, file-based configuration. Update `/data/options.json` (or the embedded `default/options.json`) instead. Set `mqtt.lastWillTopic` to change the LWT status topic.
 
 ## 7. MQTT Topics
 
@@ -90,7 +83,7 @@ If the API root is a dictionary of years pointing to arrays of objects containin
 
 ## 11. Status / Last Will
 
-LWT payload `offline` is set (topic: `solar/status` or custom `LWT_TOPIC`). On start `online` is published retained.
+LWT payload `offline` is set (topic from `mqtt.lastWillTopic`, default `solar/status`). On start `online` is published retained.
 
 ## 12. Security Notes
 

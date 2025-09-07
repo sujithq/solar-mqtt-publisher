@@ -2,26 +2,35 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
+using Microsoft.Extensions.Configuration;
+
 public static class ApiClient
 {
-    public static async Task<JsonNode> FetchAsync(ApiOptions api, CancellationToken ct)
+
+    public static async Task<JsonNode> FetchAsync(IConfiguration apiSection, CancellationToken ct)
     {
-        using var handler = new HttpClientHandler { ServerCertificateCustomValidationCallback = (m, c, ch, e) => api.VerifySsl };
-        using var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(api.TimeoutSec) };
-        using var req = new HttpRequestMessage(new HttpMethod(api.Method ?? "GET"), api.Url);
-        if (!string.IsNullOrWhiteSpace(api.Key))
-            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", api.Key);
-        if (api.Headers is not null) // merged from api.headers + api_headers[] (if provided)
-            foreach (var kv in api.Headers) req.Headers.TryAddWithoutValidation(kv.Key, kv.Value);
-
-        LogHelper.Log(LogLevelSimple.Info, $"HTTP {api.Method ?? "GET"} {api.Url} timeoutSec={api.TimeoutSec}s verifySsl={api.VerifySsl} headers={(api.Headers?.Count ?? 0)} auth={(string.IsNullOrWhiteSpace(api.Key) ? "none" : "bearer")}");
+        var verify = !string.Equals(apiSection["verifySsl"], "false", StringComparison.OrdinalIgnoreCase);
+        var timeout = int.TryParse(apiSection["timeoutSec"], out var t) ? t : 15;
+        var method = apiSection["method"] ?? "GET";
+        var url = apiSection["url"] ?? string.Empty;
+        var key = apiSection["key"];
+        var headersSection = apiSection.GetSection("headers");
+        var headers = headersSection.Exists()
+            ? headersSection.GetChildren().ToDictionary(c => c.Key, c => c.Value ?? string.Empty)
+            : new Dictionary<string,string>();
+        using var handler = new HttpClientHandler { ServerCertificateCustomValidationCallback = (m, c, ch, e) => verify };
+        using var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(timeout) };
+        using var req = new HttpRequestMessage(new HttpMethod(method), url);
+        if (!string.IsNullOrWhiteSpace(key))
+            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", key);
+        foreach (var kv in headers) req.Headers.TryAddWithoutValidation(kv.Key, kv.Value);
+        LogHelper.Log(LogLevelSimple.Info, $"HTTP {method} {url} timeoutSec={timeout}s verifySsl={verify} headers={headers.Count} auth={(string.IsNullOrWhiteSpace(key) ? "none" : "bearer")}");
         var sw = System.Diagnostics.Stopwatch.StartNew();
-
         var res = await http.SendAsync(req, ct);
         res.EnsureSuccessStatusCode();
         var json = await res.Content.ReadAsStringAsync(ct);
         sw.Stop();
-        LogHelper.Log(LogLevelSimple.Info, $"HTTP {(int)res.StatusCode} {api.Url} in {sw.ElapsedMilliseconds} ms bytes={json.Length}");
+        LogHelper.Log(LogLevelSimple.Info, $"HTTP {(int)res.StatusCode} {url} in {sw.ElapsedMilliseconds} ms bytes={json.Length}");
         return JsonNode.Parse(json)!;
     }
 
