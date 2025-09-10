@@ -17,7 +17,7 @@
     "uniquePrefix": "pv1_"
   },
   "api": {
-    "url": "http://host.docker.internal:8080/metrics",
+    "url": "https://raw.githubusercontent.com/sujithq/myenergy/refs/heads/main/src/myenergy/wwwroot/Data/consolidated.json",
     "method": "GET",
     "headers": {},
     "verifySsl": true,
