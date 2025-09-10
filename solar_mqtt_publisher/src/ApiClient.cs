@@ -53,6 +53,13 @@ public static class ApiClient
         {
             if (node is not JsonObject rootObj || rootObj.Count == 0) return false;
 
+            // Check if this is consolidated data format: simple object with P, U, I fields
+            if (TryParseConsolidatedData(rootObj, out solarKwh, out importKwh, out exportKwh))
+            {
+                LogHelper.Log(LogLevelSimple.Trace, $"Consolidated data: solar={solarKwh:F4}kWh import={importKwh:F4}kWh export={exportKwh:F4}kWh");
+                return true;
+            }
+
             double sSum = 0, iSum = 0, eSumWh = 0; // eSumWh in Wh, convert later
             int recordCount = 0;
 
@@ -83,6 +90,35 @@ public static class ApiClient
             LogHelper.Log(LogLevelSimple.Warn, $"Auto-detect totals failed: {ex.Message}");
             return false;
         }
+    }
+
+    private static bool TryParseConsolidatedData(JsonObject obj, out double solarKwh, out double importKwh, out double exportKwh)
+    {
+        solarKwh = importKwh = exportKwh = 0d;
+        
+        // Check if this looks like consolidated data: has P, U, I fields and no complex nested structure
+        if (obj.ContainsKey("P") && obj.ContainsKey("U") && obj.ContainsKey("I"))
+        {
+            // Verify it's not a complex nested structure by checking if all property values are numbers
+            foreach (var prop in obj)
+            {
+                if (prop.Value is JsonArray or JsonObject)
+                {
+                    return false; // This is complex data, not consolidated
+                }
+            }
+            
+            // Extract the consolidated values
+            if (TryGetNumber(obj, "P", out solarKwh) &&
+                TryGetNumber(obj, "U", out importKwh) &&
+                TryGetNumber(obj, "I", out var exportWh))
+            {
+                exportKwh = exportWh / 1000.0; // Convert Wh to kWh for export
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     private static bool TryGetNumber(JsonObject obj, string key, out double value)
