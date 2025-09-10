@@ -3,7 +3,7 @@
 
 # --- Project specific (secrets/runtime) ---
 # Do NOT commit runtime options containing credentials
-# data/
+solar_mqtt_publisher/data/options.json
 # Local developer copy of options used for debugging
 # src/data/options.json
 
