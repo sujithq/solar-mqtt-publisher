@@ -108,12 +108,11 @@ public static class ApiClient
                 }
             }
             
-            // Extract the consolidated values
+            // Extract the consolidated values (all in kWh)
             if (TryGetNumber(obj, "P", out solarKwh) &&
                 TryGetNumber(obj, "U", out importKwh) &&
-                TryGetNumber(obj, "I", out var exportWh))
+                TryGetNumber(obj, "I", out exportKwh))
             {
-                exportKwh = exportWh / 1000.0; // Convert Wh to kWh for export
                 return true;
             }
         }
