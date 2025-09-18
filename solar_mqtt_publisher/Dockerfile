@@ -11,6 +11,11 @@ ARG BUILD_FROM
 
 # --- Build stage ---
 FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build
+
+LABEL org.opencontainers.image.authors="sujith.quintelier@gmail.com"
+# USER root
+
+
 ARG TARGETARCH
 WORKDIR /src
 

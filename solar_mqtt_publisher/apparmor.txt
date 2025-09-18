@@ -1,0 +1,64 @@
+# AppArmor profile for Home Assistant add-on: Solar MQTT Publisher
+# Ref: https://developers.home-assistant.io/docs/add-ons/configuration/#apparmor
+
+#include <tunables/global>
+
+profile hassio-solarmqttpublisher flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+  #include <abstractions/ssl_certs>
+
+  # Environment
+  # Keep capabilities minimal; the app is a network client
+  capability net_bind_service,
+
+  # Entrypoint executable
+  /app/SolarMqtt ixr,
+
+  # Shared libraries and runtime
+  /lib/** r,
+  /usr/lib/** r,
+  /usr/share/zoneinfo/** r,
+
+  # Read configuration defaults packaged with the add-on
+  /app/default/options.json r,
+  /app/default/** r,
+  /app/Default/** r,
+
+  # Read supervisor-provided configuration
+  /data/options.json r,
+
+  # Allow reading CA certificates if verifySsl is on
+  /etc/ssl/** r,
+  /etc/pki/** r,
+  /etc/ssl/certs/** r,
+
+  # Random and machine ID (common for crypto libs)
+  /dev/urandom r,
+  /etc/machine-id r,
+
+  # DNS resolution (nameservice abstraction covers common files)
+  /etc/hosts r,
+  /etc/resolv.conf r,
+  /etc/nsswitch.conf r,
+
+  # Timezone info read
+  /etc/localtime r,
+
+  # Network client access
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+
+  # Logging to stdout/stderr
+  owner /dev/stdout w,
+  owner /dev/stderr w,
+
+  # Temporary files (if any HTTP stack uses temp)
+  /tmp/** rwk,
+
+  # Deny anything else by default
+  deny /proc/** rwklx,
+  deny /sys/** rwklx,
+}

@@ -5,5 +5,5 @@ build_from:
   amd64: ghcr.io/home-assistant/amd64-base:3.22
   i386: ghcr.io/home-assistant/i386-base:3.22
 codenotary:
-  signer: sujith.quintelier@xebia.com
+  signer: sujith.quintelier@gmail.com
   base_image: notary@home-assistant.io
