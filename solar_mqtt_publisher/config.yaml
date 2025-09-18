@@ -1,6 +1,6 @@
 name: "Solar MQTT Publisher"
 description: Publishes solar/grid energy totals to Home Assistant via MQTT Discovery for the Energy Dashboard.
-version: "0.1.24"
+version: "0.1.25"
 slug: solar_mqtt_publisher
 init: false
 arch:
@@ -24,7 +24,7 @@ uart: false
 gpio: false
 host_network: false
 apparmor: true
-apparmor_profile: hassio-solarmqttpublisher
+apparmor_profile: hassio-solar_mqtt_publisher
 options:
   mqtt:
     host: 127.0.0.1
