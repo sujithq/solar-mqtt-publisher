@@ -5,6 +5,7 @@
 
 profile hassio-solarmqttpublisher flags=(attach_disconnected,mediate_deleted) {
   #include <abstractions/base>
+  #include <abstractions/hassio>
   #include <abstractions/nameservice>
   #include <abstractions/ssl_certs>
 
@@ -12,8 +13,13 @@ profile hassio-solarmqttpublisher flags=(attach_disconnected,mediate_deleted) {
   # Keep capabilities minimal; the app is a network client
   capability net_bind_service,
 
+  # s6-overlay init and shell
+  /init rix,
+  /bin/sh rix,
+
   # Entrypoint executable
   /app/SolarMqtt ixr,
+  /app/run.sh rix,
 
   # Shared libraries and runtime
   /lib/** r,
