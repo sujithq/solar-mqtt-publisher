@@ -1,86 +1,52 @@
-# AppArmor profile for Home Assistant add-on: Solar MQTT Publisher
-# Ref: https://developers.home-assistant.io/docs/add-ons/configuration/#apparmor
-
 #include <tunables/global>
 
 profile hassio-solar_mqtt_publisher flags=(attach_disconnected,mediate_deleted) {
   #include <abstractions/base>
-  #include <abstractions/hassio>
-  #include <abstractions/nameservice>
-  #include <abstractions/ssl_certs>
 
-  # Environment
-  # Keep capabilities minimal; the app is a network client
-  capability net_bind_service,
+  # Capabilities
+  file,
+  signal (send) set=(kill,term,int,hup,cont),
 
-  # s6-overlay init and helpers
-  /init mrix,
-  /bin/sh rix,
-  /bin/ash rix,
-  /bin/busybox rix,
-  /usr/bin/with-contenv rix,
-  /command/** rix,
-  /sbin/s6-* rix,
-  /bin/s6-* rix,
-  /usr/lib/s6/** rix,
-  /usr/bin/bashio rix,
-  /usr/bin/printf rix,
-  /usr/bin/env rix,
-  /bin/** rix,
-  /usr/bin/** rix,
-  /sbin/** rix,
-  /usr/sbin/** rix,
+  # S6-Overlay
+  /init ix,
+  /bin/** ix,
+  /usr/bin/** ix,
+  /run/{s6,s6-rc*,service}/** ix,
+  /package/** ix,
+  /command/** ix,
+  /etc/services.d/** rwix,
+  /etc/cont-init.d/** rwix,
+  /etc/cont-finish.d/** rwix,
+  /run/{,**} rwk,
+  /dev/tty rw,
 
-  # Entrypoint executable
-  /app/SolarMqtt ixr,
-  /app/run.sh rix,
-
-  # Shared libraries and runtime
-  /lib/** r,
-  /usr/lib/** r,
-  /usr/share/zoneinfo/** r,
-
-  # Read configuration defaults packaged with the add-on
-  /app/default/options.json r,
-  /app/default/** r,
-  /app/Default/** r,
-
-  # Read supervisor-provided configuration
-  /data/options.json r,
-
-  # Allow reading CA certificates if verifySsl is on
-  /etc/ssl/** r,
-  /etc/pki/** r,
-  /etc/ssl/certs/** r,
-
-  # Random and machine ID (common for crypto libs)
-  /dev/urandom r,
-  /etc/machine-id r,
-
-  # DNS resolution (nameservice abstraction covers common files)
-  /etc/hosts r,
-  /etc/resolv.conf r,
-  /etc/nsswitch.conf r,
-
-  # Timezone info read
-  /etc/localtime r,
-
-  # Network client access
-  network inet stream,
-  network inet6 stream,
-  network inet dgram,
-  network inet6 dgram,
-
-  # Logging to stdout/stderr
-  owner /dev/stdout w,
-  owner /dev/stderr w,
-  /dev/null rw,
-  /dev/console rw,
-  /dev/pts/** rw,
-  /dev/fd/** r,
-
-  # Temporary files (if any HTTP stack uses temp)
+  # Bashio
+  /usr/lib/bashio/** ix,
   /tmp/** rwk,
 
-  # Avoid broad explicit denies; rely on default deny and explicit allows above
+  # Access to options.json and other files within your addon
+  /data/** rw,
+
+  # Start new profile for service
+  /app/SolarMqtt cx -> SolarMqtt,
+
+  profile SolarMqtt flags=(attach_disconnected,mediate_deleted) {
+    #include <abstractions/base>
+
+    # Receive signals from S6-Overlay
+    signal (receive) peer=*_hassio-solar_mqtt_publisher,
+
+    # Access to options.json and other files within your addon
+    /data/** rw,
+
+    # Access to mapped volumes specified in config.json
+    # /share/** rw,
+
+    # Access required for service functionality
+    /app/SolarMqtt r,
+    # /bin/bash rix,
+    # /bin/echo ix,
+    # /etc/passwd r,
+    # /dev/tty rw,
+  }
 }
