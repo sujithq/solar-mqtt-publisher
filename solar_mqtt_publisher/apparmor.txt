@@ -13,10 +13,14 @@ profile hassio-solar_mqtt_publisher flags=(attach_disconnected,mediate_deleted) 
   # Keep capabilities minimal; the app is a network client
   capability net_bind_service,
 
-  # s6-overlay init and shell
-  /init rix,
+  # s6-overlay init and helpers
+  /init mrix,
   /bin/sh rix,
   /usr/bin/with-contenv rix,
+  /command/** rix,
+  /sbin/s6-* rix,
+  /usr/bin/bashio rix,
+  /usr/bin/printf rix,
 
   # Entrypoint executable
   /app/SolarMqtt ixr,
