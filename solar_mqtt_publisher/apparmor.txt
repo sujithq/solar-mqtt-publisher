@@ -16,11 +16,20 @@ profile hassio-solar_mqtt_publisher flags=(attach_disconnected,mediate_deleted) 
   # s6-overlay init and helpers
   /init mrix,
   /bin/sh rix,
+  /bin/ash rix,
+  /bin/busybox rix,
   /usr/bin/with-contenv rix,
   /command/** rix,
   /sbin/s6-* rix,
+  /bin/s6-* rix,
+  /usr/lib/s6/** rix,
   /usr/bin/bashio rix,
   /usr/bin/printf rix,
+  /usr/bin/env rix,
+  /bin/** rix,
+  /usr/bin/** rix,
+  /sbin/** rix,
+  /usr/sbin/** rix,
 
   # Entrypoint executable
   /app/SolarMqtt ixr,
@@ -65,11 +74,13 @@ profile hassio-solar_mqtt_publisher flags=(attach_disconnected,mediate_deleted) 
   # Logging to stdout/stderr
   owner /dev/stdout w,
   owner /dev/stderr w,
+  /dev/null rw,
+  /dev/console rw,
+  /dev/pts/** rw,
+  /dev/fd/** r,
 
   # Temporary files (if any HTTP stack uses temp)
   /tmp/** rwk,
 
-  # Deny anything else by default
-  deny /proc/** rwklx,
-  deny /sys/** rwklx,
+  # Avoid broad explicit denies; rely on default deny and explicit allows above
 }
