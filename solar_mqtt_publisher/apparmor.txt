@@ -4,14 +4,15 @@ profile hassio-solar_mqtt_publisher flags=(attach_disconnected,mediate_deleted) 
   #include <abstractions/base>
   #include <abstractions/hassio>
 
-  # Capabilities
   file,
   signal (send) set=(kill,term,int,hup,cont),
 
-  # S6-Overlay
+  # s6 / shell / scripts
   /init ix,
   /bin/** ix,
   /usr/bin/** ix,
+  /app/run.sh ix,
+
   /run/{s6,s6-rc*,service}/** ix,
   /package/** ix,
   /command/** ix,
@@ -20,90 +21,77 @@ profile hassio-solar_mqtt_publisher flags=(attach_disconnected,mediate_deleted) 
   /etc/cont-finish.d/** rwix,
   /run/{,**} rwk,
   /dev/tty rw,
-
-  # Bashio
   /usr/lib/bashio/** ix,
   /tmp/** rwk,
 
-  # Access to options.json and other files within your addon
+  # Add-on data
   /data/** rw,
 
-  # Start new profile for service
+  # Allow network here too (helps during early bootstrap)
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+
+  # Transition to the app’s subprofile
   /app/SolarMqtt cx -> SolarMqtt,
+
 
   profile SolarMqtt flags=(attach_disconnected,mediate_deleted) {
     #include <abstractions/base>
     #include <abstractions/hassio>
-    # Networking and DNS resolution
-    # Allow standard name service files and resolvers
-    # (hosts, resolv.conf, nsswitch.conf, etc.)
-    # and TLS certificates access
-    # These abstractions keep the profile concise and portable
-    # across base images.
-    #
-    # Note: network rules are still required for actual socket usage below.
-    #
-    # Nameservice and SSL certificate abstractions
-    # provide file read access; network rules are added separately.
     #include <abstractions/nameservice>
     #include <abstractions/ssl_certs>
 
-    # Receive signals from S6-Overlay
-    signal (receive) peer=*_hassio-solar_mqtt_publisher,
+    # Receive signals from parent
+    signal (receive) peer=hassio-solar_mqtt_publisher,
 
-    # Access to options.json and other files within your addon
+    # Executable & config
+    /app/SolarMqtt mr,
+    /app/default/options.json r,
     /data/** rw,
 
-    # Access to mapped volumes specified in config.json
-    # /share/** rw,
+    # Native loader + libs (Alpine musl, single-file needs mmaps)
+    /lib/** mr,
+    /usr/lib/** mr,
 
-    # Access required for service functionality
-    /app/SolarMqtt r,
-    /app/default/options.json r,
-    
-    # Timezone and machine identity reads used by runtime libs
+    # Time/identity
     /etc/localtime r,
     /etc/machine-id r,
 
-    # Devices commonly used by runtime
+    # TLS/DNS essentials (be explicit)
+    /etc/ssl/** r,
+    /etc/ca-certificates/** r,
+    /usr/share/ca-certificates/** r,
+    /etc/ssl/openssl.cnf r,
+    /etc/hosts r,
+    /etc/resolv.conf r,
+    /etc/nsswitch.conf r,
+    /etc/gai.conf r,
+    /usr/share/zoneinfo/** r,
+    /run/** r,
+
+    # Devices & logs
     /dev/urandom r,
     /dev/null rw,
     owner /dev/stdout w,
     owner /dev/stderr w,
 
-    # Temporary files used by runtime (.NET single-file extraction, HTTP/TLS temps)
+    # Temp (extract/scratch)
     /tmp/** rwk,
 
-    # Network client access: TCP (stream) and UDP (dgram) for DNS
+    # Network (just what you need)
     network inet stream,
     network inet6 stream,
     network inet dgram,
     network inet6 dgram,
 
-    # Allow local unix sockets and netlink queries (route, raw) used by some stacks
-    network unix stream,
-    network unix dgram,
-    network netlink raw,
-    network netlink dgram,
-    network netlink route,
-
-    # Optional extra certificate locations on some bases
-    /etc/ssl/** r,
-    /etc/pki/** r,
-    /usr/share/ca-certificates/** r,
-    /etc/ca-certificates/** r,
-    /etc/gai.conf r,
-    
-    # Common runtime/system files
-    /run/** r,
-    /usr/share/zoneinfo/** r,
-
-    # Optional: read access to proc net for diagnostics/stack behaviors
+    # Optional diagnostics
     /proc/net/** r,
     /proc/sys/net/** r,
-    # /bin/bash rix,
-    # /bin/echo ix,
-    # /etc/passwd r,
-    # /dev/tty rw,
+
+    # Guardrails (adjust if you actually need these)
+    deny /config/** rwkl,
+    deny /root/** rwkl,
   }
 }
